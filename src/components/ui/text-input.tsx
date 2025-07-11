@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "@/lib/utils"
 import { Input } from "./input"
 import { Label } from "./label"
 import { HelpCircle } from "lucide-react"
@@ -40,7 +39,8 @@ interface TextInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
   ({ className, label, tooltip, description, id, ...props }, ref) => {
-    const inputId = id || React.useId()
+    const generatedId = React.useId()
+    const inputId = id || generatedId
     const [showTooltip, setShowTooltip] = React.useState(false)
     
     return (
@@ -56,9 +56,9 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
                   onMouseLeave={() => setShowTooltip(false)}
                 />
                 {showTooltip && (
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-popover text-popover-foreground text-sm rounded-md shadow-md border z-50 whitespace-nowrap">
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 tooltip-popover">
                     {tooltip}
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-popover"></div>
+                    <div className="tooltip-arrow"></div>
                   </div>
                 )}
               </div>
@@ -72,7 +72,7 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
           {...props}
         />
         {description && (
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-description">{description}</p>
         )}
       </div>
     )

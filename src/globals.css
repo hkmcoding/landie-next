@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./typography.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -58,6 +59,10 @@
   }
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -98,8 +103,6 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.129 0.042 264.695);
   --popover: oklch(1 0 0);
@@ -129,6 +132,8 @@
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.129 0.042 264.695);
 }
 
 .dark {
@@ -171,5 +176,14 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 }

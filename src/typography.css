@@ -1,0 +1,52 @@
+@layer components {
+  /* Major headings */
+  .heading-1     { @apply text-5xl font-extrabold leading-tight tracking-tight; }
+  .heading-2     { @apply text-4xl font-bold       leading-tight tracking-tight; }
+  .heading-3     { @apply text-3xl font-semibold   leading-snug; }
+  .heading-4     { @apply text-2xl font-semibold   leading-snug; }
+  .heading-5     { @apply text-xl  font-semibold   leading-snug; }
+  
+  /* Subheadings / section titles */
+  .subtitle-1    { @apply text-2xl font-medium     leading-snug; }
+  .subtitle-2    { @apply text-xl font-medium     leading-snug; }
+  .subtitle-3    { @apply text-lg font-medium     leading-snug; }
+  .subtitle-4    { @apply text-base font-medium     leading-snug; }
+
+  /* Body text */
+  .paragraph     { @apply text-base leading-relaxed; }
+  .paragraph-md  { @apply text-base font-medium leading-relaxed; }
+
+  /* Fine print & annotations */
+  .caption       { @apply text-sm font-medium leading-snug; }
+  .caption-sm    { @apply text-xs leading-tight tracking-wide; }
+
+  /* Form labels, badges */
+  .label         { @apply text-sm font-semibold tracking-wider; }
+} 
+
+/* Label (matches Label component) */
+.label {
+  @apply flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50;
+}
+
+/* Tooltip popover (matches TextInput tooltip) */
+.tooltip-popover {
+  @apply px-3 py-2 bg-popover text-popover-foreground text-sm rounded-md shadow-md border z-50 whitespace-nowrap;
+}
+.tooltip-arrow {
+  @apply absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-popover;
+}
+
+/* Form field messages */
+.text-description {
+  @apply text-sm text-muted-foreground;
+}
+.text-error, .text-destructive {
+  @apply text-sm text-destructive;
+}
+.text-success {
+  @apply text-sm text-muted-foreground;
+}
+.text-warning {
+  @apply text-sm text-muted-foreground;
+} 

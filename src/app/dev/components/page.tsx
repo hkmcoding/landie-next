@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { MultiFileInput } from "@/components/ui/multi-file-input";
@@ -22,8 +21,8 @@ export default function ComponentsPage() {
     <div className="min-h-screen p-8 bg-background">
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-foreground">shadcn/ui Test Page</h1>
-          <p className="text-muted-foreground">Testing shadcn/ui components in Next.js App Router</p>
+          <h1 className="heading-3">Components</h1>
+          <p className="text-description">Testing shadcn/ui components in Next.js App Router</p>
         </div>
 
         {/* Color Scheme Test */}
@@ -71,6 +70,11 @@ export default function ComponentsPage() {
               <Button size="lg">Large</Button>
             </div>
             <div className="flex flex-wrap gap-4">
+              <Button size="sm" round>Small Rounded</Button>
+              <Button size="default" round>Default Rounded</Button>
+              <Button size="lg" round>Large Rounded</Button>
+            </div>
+            <div className="flex flex-wrap gap-4">
               <Button loading loadingText="Loading...">
                 Loading...
               </Button>
@@ -90,7 +94,7 @@ export default function ComponentsPage() {
           <CardContent className="space-y-6">
             {/* Standard Text Inputs */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Standard Text Inputs</h3>
+              <h3 className="heading-3">Standard Text Inputs</h3>
               <TextInput
                 label="Name"
                 placeholder="Enter your full name"
@@ -109,7 +113,7 @@ export default function ComponentsPage() {
 
             {/* Username States */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Username Input States</h3>
+              <h3 className="heading-3">Username Input States</h3>
               <FormField
                 label="Username (Default)"
                 placeholder="Enter your username"
@@ -128,7 +132,7 @@ export default function ComponentsPage() {
 
             {/* Other Form Elements */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Other Input Types</h3>
+              <h3 className="heading-3">Other Input Types</h3>
               <FormField
                 label="Email (Default)"
                 type="email"
@@ -175,7 +179,7 @@ export default function ComponentsPage() {
                 error="Passwords do not match"
               />
               <div className="space-y-2">
-                <Label htmlFor="message">Message</Label>
+                <Label htmlFor="message" className="label">Message</Label>
                 <Textarea id="message" placeholder="Enter your message" />
               </div>
               <FileUpload
@@ -193,7 +197,7 @@ export default function ComponentsPage() {
                 error="Please upload a valid image file (JPG, PNG, GIF)"
               />
               <div className="space-y-2">
-                <Label>Multiple Images Upload</Label>
+                <Label className="label">Multiple Images Upload</Label>
                 <MultiFileInput maxFiles={5} maxFileSize={5} />
               </div>
             </div>

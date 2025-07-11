@@ -4,7 +4,6 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Input } from "./input"
 import { Label } from "./label"
-import { Upload, X } from "lucide-react"
 
 /**
  * FileUpload component for single file uploads with preview and validation.
@@ -61,7 +60,8 @@ const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
   }, ref) => {
     const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
     const [previewUrl, setPreviewUrl] = React.useState<string | null>(null)
-    const inputId = id || React.useId()
+    const generatedId = React.useId()
+    const inputId = id || generatedId
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0] || null
@@ -94,15 +94,6 @@ const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
       }
     }
 
-    const removeFile = () => {
-      setSelectedFile(null)
-      setPreviewUrl(null)
-      onFileChange?.(null)
-      // Reset input
-      const input = document.getElementById(inputId) as HTMLInputElement
-      if (input) input.value = ''
-    }
-
     React.useEffect(() => {
       return () => {
         // Cleanup preview URL on unmount
@@ -115,52 +106,31 @@ const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
     return (
       <div className="space-y-2">
         {label && (
-          <Label htmlFor={inputId}>{label}</Label>
+          <Label htmlFor={inputId} className="label">{label}</Label>
         )}
         
-        {!selectedFile ? (
-          <Input
-            ref={ref}
-            id={inputId}
-            type="file"
-            accept={acceptedTypes}
-            onChange={handleFileChange}
-            className={cn(
-              "file:text-foreground placeholder:text-muted-foreground",
-              "cursor-pointer",
-              error && "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/50",
-              className
-            )}
-            {...props}
-          />
-        ) : (
-          <div className="relative">
-            {showPreview && previewUrl && (
-              <div className="relative inline-block">
-                <img
-                  src={previewUrl}
-                  alt={selectedFile.name}
-                  className="w-20 h-20 object-cover rounded-md border"
-                />
-                <button
-                  type="button"
-                  onClick={removeFile}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center text-xs hover:bg-destructive/90 transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            )}
-            <p className="text-sm text-muted-foreground mt-1">{selectedFile.name}</p>
-          </div>
-        )}
+        <Input
+          ref={ref}
+          id={inputId}
+          type="file"
+          accept={acceptedTypes}
+          onChange={handleFileChange}
+          className={cn(
+            "file:text-foreground placeholder:text-muted-foreground",
+            "cursor-pointer",
+            error && "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/50",
+            className
+          )}
+          {...props}
+        />
+        
         
         {error && (
-          <p className="text-sm text-destructive">{error}</p>
+          <p className="text-error">{error}</p>
         )}
         
         {!error && !selectedFile && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-description caption-sm">{/* was text-xs */}
             PNG, JPG, GIF up to {maxSize}MB
           </p>
         )}

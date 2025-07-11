@@ -2,20 +2,24 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { Upload } from "lucide-react"
+import { Upload, X } from "lucide-react"
 
 interface MultiFileInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   onFilesChange?: (files: FileList | null) => void
   maxFiles?: number
   acceptedTypes?: string
   maxFileSize?: number // in MB
+  existingImages?: string[]
+  onRemoveExistingImage?: (index: number) => void
 }
 
 const MultiFileInput = React.forwardRef<HTMLInputElement, MultiFileInputProps>(
-  ({ className, onFilesChange, maxFiles = 5, acceptedTypes = "image/*", maxFileSize = 5, ...props }, ref) => {
+  ({ className, onFilesChange, maxFiles = 5, acceptedTypes = "image/*", maxFileSize = 5, existingImages = [], onRemoveExistingImage, ...props }, ref) => {
     const [dragActive, setDragActive] = React.useState(false)
     const [selectedFiles, setSelectedFiles] = React.useState<File[]>([])
     const inputRef = React.useRef<HTMLInputElement>(null)
+    
+    React.useImperativeHandle(ref, () => inputRef.current!)
 
     const handleDrag = React.useCallback((e: React.DragEvent) => {
       e.preventDefault()
@@ -36,7 +40,7 @@ const MultiFileInput = React.forwardRef<HTMLInputElement, MultiFileInputProps>(
         const files = Array.from(e.dataTransfer.files)
         const imageFiles = files.filter(file => file.type.startsWith('image/'))
         
-        if (imageFiles.length + selectedFiles.length > maxFiles) {
+        if (imageFiles.length + selectedFiles.length + existingImages.length > maxFiles) {
           alert(`You can only upload up to ${maxFiles} images`)
           return
         }
@@ -56,7 +60,7 @@ const MultiFileInput = React.forwardRef<HTMLInputElement, MultiFileInputProps>(
         const files = Array.from(e.target.files)
         const imageFiles = files.filter(file => file.type.startsWith('image/'))
         
-        if (imageFiles.length + selectedFiles.length > maxFiles) {
+        if (imageFiles.length + selectedFiles.length + existingImages.length > maxFiles) {
           alert(`You can only upload up to ${maxFiles} images`)
           return
         }
@@ -103,21 +107,40 @@ const MultiFileInput = React.forwardRef<HTMLInputElement, MultiFileInputProps>(
           
           <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
             <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
-            <p className="mb-2 text-sm text-muted-foreground">
+            <p className="mb-2 text-description">
               <span className="font-semibold">Click to upload</span> or drag and drop
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="caption-sm text-muted-foreground">
               PNG, JPG, GIF up to {maxFileSize}MB (max {maxFiles} files)
             </p>
           </div>
         </div>
 
-        {selectedFiles.length > 0 && (
+        {(selectedFiles.length > 0 || existingImages.length > 0) && (
           <div className="space-y-2">
-            <p className="text-sm font-medium">Selected Files ({selectedFiles.length}/{maxFiles})</p>
+            <p className="label font-medium">Selected Files ({selectedFiles.length + existingImages.length}/{maxFiles})</p>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {existingImages.map((imageUrl, index) => (
+                <div key={`existing-${index}`} className="relative group">
+                  <img
+                    src={imageUrl}
+                    alt={`Existing image ${index + 1}`}
+                    className="w-full h-20 object-cover rounded-md border"
+                  />
+                  {onRemoveExistingImage && (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveExistingImage(index)}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-white rounded-full flex items-center justify-center caption-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                  <p className="text-description caption-sm truncate mt-1">Existing image</p>
+                </div>
+              ))}
               {selectedFiles.map((file, index) => (
-                <div key={index} className="relative group">
+                <div key={`new-${index}`} className="relative group">
                   <img
                     src={URL.createObjectURL(file)}
                     alt={file.name}
@@ -126,11 +149,11 @@ const MultiFileInput = React.forwardRef<HTMLInputElement, MultiFileInputProps>(
                   <button
                     type="button"
                     onClick={() => removeFile(index)}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-white rounded-full flex items-center justify-center caption-sm opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    ×
+                    <X className="w-4 h-4" />
                   </button>
-                  <p className="text-xs text-muted-foreground truncate mt-1">{file.name}</p>
+                  <p className="text-description caption-sm truncate mt-1">{file.name}</p>
                 </div>
               ))}
             </div>

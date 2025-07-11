@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "@/lib/utils"
 import { Input } from "./input"
 import { Label } from "./label"
 
@@ -53,7 +52,8 @@ interface FormFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 const FormField = React.forwardRef<HTMLInputElement, FormFieldProps>(
   ({ className, label, error, success, warning, description, id, ...props }, ref) => {
-    const inputId = id || React.useId()
+    const generatedId = React.useId()
+    const inputId = id || generatedId
     
     return (
       <div className="space-y-2">
@@ -70,16 +70,16 @@ const FormField = React.forwardRef<HTMLInputElement, FormFieldProps>(
           {...props}
         />
         {description && !error && !success && !warning && (
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-description">{description}</p>
         )}
         {error && (
-          <p className="text-sm text-destructive">{error}</p>
+          <p className="text-error">{error}</p>
         )}
         {success && (
-          <p className="text-sm text-muted-foreground">{success}</p>
+          <p className="text-success">{success}</p>
         )}
         {warning && (
-          <p className="text-sm text-muted-foreground">{warning}</p>
+          <p className="text-warning">{warning}</p>
         )}
       </div>
     )
