@@ -93,8 +93,8 @@ export function AnalyticsSection({ dashboardData, userId }: AnalyticsSectionProp
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="marketing" disabled={!isPro}>
-            AI Marketing Assistant {!isPro && "(Pro)"}
+          <TabsTrigger value="marketing">
+            AI Marketing Assistant
           </TabsTrigger>
         </TabsList>
 
@@ -103,7 +103,7 @@ export function AnalyticsSection({ dashboardData, userId }: AnalyticsSectionProp
         </TabsContent>
 
         <TabsContent value="marketing" className="space-y-6">
-          {isPro && <MarketingAssistantTab analyticsData={analyticsData} dashboardData={dashboardData} />}
+          <MarketingAssistantTab analyticsData={analyticsData} dashboardData={dashboardData} />
         </TabsContent>
       </Tabs>
     </div>
@@ -111,9 +111,10 @@ export function AnalyticsSection({ dashboardData, userId }: AnalyticsSectionProp
 }
 
 function OverviewTab({ analyticsData, isPro }: { analyticsData: AnalyticsData; isPro: boolean }) {
-  const totalCtaClicks = analyticsData.ctaClicks.length
-  const totalUniqueVisitors = analyticsData.uniqueVisits.length
-  const totalPageViews = analyticsData.pageViews.length
+  // Use database aggregated counts for consistency with pro analytics
+  const totalCtaClicks = analyticsData.totalCtaClicks ?? analyticsData.ctaClicks.length
+  const totalUniqueVisitors = analyticsData.totalUniqueVisitors ?? analyticsData.uniqueVisits.length
+  const totalPageViews = analyticsData.totalPageViews ?? analyticsData.pageViews.length
   const avgSessionDuration = analyticsData.averagePageSession?.avg_session_duration || 0
 
   const formatDuration = (seconds: number) => {

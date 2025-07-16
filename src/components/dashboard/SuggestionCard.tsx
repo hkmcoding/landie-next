@@ -5,6 +5,15 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from '@/components/ui/dialog';
 import { SuggestionCard as SuggestionCardType } from '@/types/ai-assistant';
 import { 
   CheckCircle, 
@@ -22,7 +31,7 @@ import {
 
 interface SuggestionCardProps {
   suggestionCard: SuggestionCardType;
-  onAction: (suggestionId: string, action: 'implement' | 'dismiss' | 'test', data?: any) => Promise<void>;
+  onAction: (suggestionId: string, action: 'implement' | 'dismiss', data?: any) => Promise<void>;
   showPerformance?: boolean;
 }
 
@@ -32,13 +41,14 @@ export function SuggestionCard({ suggestionCard, onAction, showPerformance = fal
   const [isImplementing, setIsImplementing] = useState(false);
   const [implementationContent, setImplementationContent] = useState('');
   const [showImplementForm, setShowImplementForm] = useState(false);
+  const [showDismissDialog, setShowDismissDialog] = useState(false);
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityVariant = (priority: string): 'danger' | 'warning' | 'success' | 'default' => {
     switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'high': return 'danger';     // Red for high priority
+      case 'medium': return 'warning';  // Yellow for medium priority  
+      case 'low': return 'success';     // Green for low priority
+      default: return 'default';
     }
   };
 
@@ -46,7 +56,6 @@ export function SuggestionCard({ suggestionCard, onAction, showPerformance = fal
     switch (status) {
       case 'implemented': return <CheckCircle className="w-4 h-4 text-green-600" />;
       case 'dismissed': return <XCircle className="w-4 h-4 text-red-600" />;
-      case 'testing': return <Clock className="w-4 h-4 text-blue-600" />;
       default: return <AlertTriangle className="w-4 h-4 text-orange-600" />;
     }
   };
@@ -84,9 +93,8 @@ export function SuggestionCard({ suggestionCard, onAction, showPerformance = fal
   };
 
   const handleDismiss = async () => {
-    if (confirm('Are you sure you want to dismiss this suggestion?')) {
-      await onAction(suggestion.id, 'dismiss');
-    }
+    await onAction(suggestion.id, 'dismiss');
+    setShowDismissDialog(false);
   };
 
   const renderPerformanceMetrics = () => {
@@ -104,12 +112,8 @@ export function SuggestionCard({ suggestionCard, onAction, showPerformance = fal
           ) : (
             <BarChart className="w-4 h-4 text-gray-600" />
           )}
-          <span className="subtitle-3">Performance Impact</span>
-          <Badge variant="outline" className={`text-xs ${
-            confidence === 'high' ? 'border-green-200 text-green-700' :
-            confidence === 'medium' ? 'border-yellow-200 text-yellow-700' :
-            'border-gray-200 text-gray-700'
-          }`}>
+          <span className="body-small font-medium">Performance Impact</span>
+          <Badge variant={confidence === 'high' ? 'default' : 'outline'}>
             {confidence} confidence
           </Badge>
         </div>
@@ -117,7 +121,7 @@ export function SuggestionCard({ suggestionCard, onAction, showPerformance = fal
         {keyMetrics.length > 0 && (
           <div className="space-y-1">
             {keyMetrics.map((metric, index) => (
-              <p key={index} className="caption text-gray-700">• {metric}</p>
+              <p key={index} className="body-small text-gray-700">• {metric}</p>
             ))}
           </div>
         )}
@@ -127,20 +131,22 @@ export function SuggestionCard({ suggestionCard, onAction, showPerformance = fal
 
   return (
     <Card className="p-4 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-start gap-3 flex-1">
+      {/* Header with title and status */}
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
           {getTypeIcon(suggestion.suggestion_type)}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="subtitle-2">{suggestion.title}</h3>
+              <h3 className="body-large font-semibold">{suggestion.title}</h3>
               {getStatusIcon(suggestion.status)}
             </div>
-            <p className="paragraph text-gray-700">{suggestion.description}</p>
+            <p className="body-medium text-gray-700">{suggestion.description}</p>
           </div>
         </div>
         
-        <div className="flex items-center gap-2 ml-4">
-          <Badge className={getPriorityColor(suggestion.priority)}>
+        {/* Badges - desktop on right, mobile below */}
+        <div className="hidden sm:flex flex-col items-end gap-2 flex-shrink-0">
+          <Badge variant={getPriorityVariant(suggestion.priority)}>
             {suggestion.priority}
           </Badge>
           {suggestion.confidence_score && (
@@ -149,6 +155,18 @@ export function SuggestionCard({ suggestionCard, onAction, showPerformance = fal
             </Badge>
           )}
         </div>
+      </div>
+      
+      {/* Mobile badges - show below content on mobile */}
+      <div className="flex flex-wrap items-center gap-2 mb-3 sm:hidden">
+        <Badge variant={getPriorityVariant(suggestion.priority)}>
+          {suggestion.priority}
+        </Badge>
+        {suggestion.confidence_score && (
+          <Badge variant="outline" className="text-xs">
+            {Math.round(suggestion.confidence_score * 100)}% confident
+          </Badge>
+        )}
       </div>
 
       {/* Reasoning (expandable) */}
@@ -164,9 +182,9 @@ export function SuggestionCard({ suggestionCard, onAction, showPerformance = fal
         
         {isExpanded && (
           <div className="mt-2 p-3 bg-blue-50 rounded border border-blue-200">
-            <p className="paragraph text-blue-800">{suggestion.reasoning}</p>
+            <p className="body-medium text-blue-800">{suggestion.reasoning}</p>
             {suggestion.target_section && (
-              <p className="caption text-blue-600 mt-2">
+              <p className="body-small text-blue-600 mt-2">
                 Target section: <span className="font-medium">{suggestion.target_section}</span>
               </p>
             )}
@@ -177,8 +195,8 @@ export function SuggestionCard({ suggestionCard, onAction, showPerformance = fal
       {/* Suggested Content */}
       {suggestion.suggested_content && (
         <div className="mb-4 p-3 bg-green-50 rounded border border-green-200">
-          <p className="caption text-green-700 font-medium mb-1">Suggested content:</p>
-          <p className="paragraph text-green-800">{suggestion.suggested_content}</p>
+          <p className="body-small text-green-700 font-medium mb-1">Suggested content:</p>
+          <p className="body-medium text-green-800">{suggestion.suggested_content}</p>
         </div>
       )}
 
@@ -187,34 +205,45 @@ export function SuggestionCard({ suggestionCard, onAction, showPerformance = fal
 
       {/* Action Buttons */}
       {suggestion.status === 'pending' && (
-        <div className="flex items-center gap-2 mt-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center mt-4">
           {!showImplementForm ? (
             <>
               <Button
-                onClick={() => setShowImplementForm(true)}
+                onClick={() => onAction(suggestion.id, 'implement', { implementation_content: 'Completed', implementation_notes: 'Marked as completed by user' })}
                 size="sm"
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
               >
                 <CheckCircle className="w-4 h-4 mr-1" />
-                Implement
+                Mark Completed
               </Button>
-              <Button
-                onClick={() => onAction(suggestion.id, 'test')}
-                variant="outline"
-                size="sm"
-              >
-                <Clock className="w-4 h-4 mr-1" />
-                Test First
-              </Button>
-              <Button
-                onClick={handleDismiss}
-                variant="outline"
-                size="sm"
-                className="text-red-600 hover:text-red-700 hover:border-red-300"
-              >
-                <XCircle className="w-4 h-4 mr-1" />
-                Dismiss
-              </Button>
+              <Dialog open={showDismissDialog} onOpenChange={setShowDismissDialog}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                  >
+                    <XCircle className="w-4 h-4 mr-1" />
+                    Dismiss
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Dismiss Suggestion</DialogTitle>
+                    <DialogDescription>
+                      Are you sure you want to dismiss this suggestion? This action cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowDismissDialog(false)}>
+                      Cancel
+                    </Button>
+                    <Button variant="destructive" onClick={handleDismiss}>
+                      Dismiss
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </>
           ) : (
             <div className="w-full space-y-3">
@@ -252,7 +281,7 @@ export function SuggestionCard({ suggestionCard, onAction, showPerformance = fal
       {/* Implementation Status */}
       {suggestion.status === 'implemented' && suggestion.implemented_at && (
         <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
-          <p className="caption text-green-700">
+          <p className="body-small text-green-700">
             ✅ Implemented on {new Date(suggestion.implemented_at).toLocaleDateString()}
           </p>
         </div>
@@ -260,26 +289,19 @@ export function SuggestionCard({ suggestionCard, onAction, showPerformance = fal
 
       {suggestion.status === 'dismissed' && suggestion.dismissed_at && (
         <div className="mt-4 p-3 bg-gray-50 rounded border border-gray-200">
-          <p className="caption text-gray-700">
+          <p className="body-small text-gray-700">
             ❌ Dismissed on {new Date(suggestion.dismissed_at).toLocaleDateString()}
           </p>
         </div>
       )}
 
-      {suggestion.status === 'testing' && (
-        <div className="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
-          <p className="caption text-blue-700">
-            🔬 Currently testing this suggestion
-          </p>
-        </div>
-      )}
 
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
-        <p className="caption text-gray-500">
+        <p className="body-small text-gray-500">
           {new Date(suggestion.created_at).toLocaleDateString()}
         </p>
-        <p className="caption text-gray-500">
-          {suggestion.ai_model} • {suggestion.ai_prompt_version}
+        <p className="body-small text-gray-500">
+          AI Generated
         </p>
       </div>
     </Card>

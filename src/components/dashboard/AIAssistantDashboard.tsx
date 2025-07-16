@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SuggestionCard } from './SuggestionCard';
 import { AnalyticsOverview } from './AnalyticsOverview';
 import { PerformanceMetrics } from './PerformanceMetrics';
@@ -14,7 +15,7 @@ import {
   SuggestionCard as SuggestionCardType,
   APIResponse 
 } from '@/types/ai-assistant';
-import { Sparkles, TrendingUp, Brain, RefreshCw } from 'lucide-react';
+import { Sparkles, TrendingUp, Brain, RefreshCw, CheckCircle } from 'lucide-react';
 
 interface AIAssistantDashboardProps {
   landingPageId: string;
@@ -28,6 +29,8 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [lastAnalysisTime, setLastAnalysisTime] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'priority' | 'confidence'>('priority');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Load initial data
   useEffect(() => {
@@ -188,8 +191,22 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
         throw new Error(result.error || 'Action failed');
       }
 
-      // Reload suggestions to show updated status
-      await loadDashboardData();
+      // Update local state instead of full reload for better performance
+      setSuggestions(prevSuggestions => 
+        prevSuggestions.map(suggestionCard => 
+          suggestionCard.suggestion.id === suggestionId 
+            ? {
+                ...suggestionCard,
+                suggestion: {
+                  ...suggestionCard.suggestion,
+                  status: action === 'implement' ? 'implemented' : action === 'dismiss' ? 'dismissed' : suggestionCard.suggestion.status,
+                  implemented_at: action === 'implement' ? new Date().toISOString() : suggestionCard.suggestion.implemented_at,
+                  dismissed_at: action === 'dismiss' ? new Date().toISOString() : suggestionCard.suggestion.dismissed_at
+                }
+              }
+            : suggestionCard
+        )
+      );
 
     } catch (error) {
       console.error('Suggestion action error:', error);
@@ -205,9 +222,27 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
     );
   }
 
-  const pendingSuggestions = suggestions.filter(s => s.suggestion.status === 'pending');
+  // Sorting function
+  const sortSuggestions = (suggestions: SuggestionCardType[]) => {
+    return suggestions.sort((a, b) => {
+      if (sortBy === 'priority') {
+        const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+        const aValue = priorityOrder[a.suggestion.priority as keyof typeof priorityOrder] || 0;
+        const bValue = priorityOrder[b.suggestion.priority as keyof typeof priorityOrder] || 0;
+        return sortOrder === 'desc' ? bValue - aValue : aValue - bValue;
+      } else {
+        const aValue = a.suggestion.confidence_score || 0;
+        const bValue = b.suggestion.confidence_score || 0;
+        return sortOrder === 'desc' ? bValue - aValue : aValue - bValue;
+      }
+    });
+  };
+
+  const pendingSuggestions = sortSuggestions(suggestions.filter(s => s.suggestion.status === 'pending'));
   const implementedSuggestions = suggestions.filter(s => s.suggestion.status === 'implemented');
   const totalSuggestions = suggestions.length;
+  const hasCompletedSuggestions = implementedSuggestions.length > 0;
+  const canRunAnalysis = pendingSuggestions.length === 0;
 
   return (
     <AIErrorBoundary>
@@ -218,7 +253,7 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Brain className="w-6 h-6 text-blue-600" />
-              <h1 className="heading-2 text-blue-900">Welcome back, {userName}!</h1>
+              <h1 className="heading-2 text-blue-900">Hi, {userName}</h1>
             </div>
             <p className="paragraph text-blue-700">
               Your AI Marketing Assistant is ready to help optimize your landing page performance.
@@ -227,8 +262,9 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
           <div className="flex flex-col gap-2">
             <Button
               onClick={() => runAIAnalysis('full')}
-              disabled={isAnalyzing}
+              disabled={isAnalyzing || !canRunAnalysis}
               className="bg-blue-600 hover:bg-blue-700"
+              title={!canRunAnalysis ? "Complete or dismiss pending suggestions first" : ""}
             >
               {isAnalyzing ? (
                 <>
@@ -238,7 +274,7 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
               ) : (
                 <>
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Run AI Analysis
+                  {!canRunAnalysis ? "Complete suggestions first" : "Run AI Analysis"}
                 </>
               )}
             </Button>
@@ -258,39 +294,36 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
         </Card>
       )}
 
-      {/* Analytics Overview */}
-      {analyticsSummary && (
-        <AnalyticsOverview 
-          analytics={analyticsSummary} 
-          landingPageId={landingPageId}
-        />
-      )}
-
-      {/* Performance Metrics */}
-      <PerformanceMetrics 
-        totalSuggestions={totalSuggestions}
-        implementedSuggestions={implementedSuggestions.length}
-        pendingSuggestions={pendingSuggestions.length}
-        landingPageId={landingPageId}
-      />
-
       {/* AI Suggestions */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-green-600" />
             <h2 className="heading-3">AI Recommendations</h2>
           </div>
           {pendingSuggestions.length > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => runAIAnalysis('incremental')}
-              disabled={isAnalyzing}
-              size="sm"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Select value={sortBy} onValueChange={(value: 'priority' | 'confidence') => setSortBy(value)}>
+                <SelectTrigger className="w-full sm:w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="priority">Priority</SelectItem>
+                  <SelectItem value="confidence">Confidence</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                className="w-full sm:w-auto"
+              >
+                {sortBy === 'priority' 
+                  ? (sortOrder === 'desc' ? 'High → Low' : 'Low → High')
+                  : (sortOrder === 'desc' ? 'High → Low' : 'Low → High')
+                }
+              </Button>
+            </div>
           )}
         </div>
 
@@ -313,13 +346,23 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
         ) : (
           <div className="grid gap-4">
             {/* Pending Suggestions */}
-            {pendingSuggestions.map((suggestionCard) => (
-              <SuggestionCard
-                key={suggestionCard.suggestion.id}
-                suggestionCard={suggestionCard}
-                onAction={handleSuggestionAction}
-              />
-            ))}
+            {pendingSuggestions.length > 0 ? (
+              pendingSuggestions.map((suggestionCard) => (
+                <SuggestionCard
+                  key={suggestionCard.suggestion.id}
+                  suggestionCard={suggestionCard}
+                  onAction={handleSuggestionAction}
+                />
+              ))
+            ) : (
+              <Card className="p-8 text-center">
+                <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500 opacity-50" />
+                <h3 className="heading-4 mb-2">All suggestions completed!</h3>
+                <p className="paragraph text-gray-600 mb-4">
+                  Great work! You've addressed all pending recommendations. Run a new analysis to get fresh insights.
+                </p>
+              </Card>
+            )}
 
             {/* Implemented Suggestions */}
             {implementedSuggestions.length > 0 && (
@@ -338,6 +381,22 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
           </div>
         )}
       </div>
+
+      {/* Analytics Overview */}
+      {analyticsSummary && (
+        <AnalyticsOverview 
+          analytics={analyticsSummary} 
+          landingPageId={landingPageId}
+        />
+      )}
+
+      {/* Performance Metrics */}
+      <PerformanceMetrics 
+        totalSuggestions={totalSuggestions}
+        implementedSuggestions={implementedSuggestions.length}
+        pendingSuggestions={pendingSuggestions.length}
+        landingPageId={landingPageId}
+      />
       </div>
     </AIErrorBoundary>
   );

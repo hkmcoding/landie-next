@@ -6,11 +6,10 @@ import {
   UserAnalyticsSummary,
   AIAnalysisSession 
 } from '@/types/ai-assistant';
-import { createClient } from '@/lib/supabase/client';
+// Remove the import since we'll pass the client from the API route
 
 class AIService {
   private openai: OpenAI;
-  private supabase = createClient();
 
   constructor() {
     if (!process.env.OPENAI_API_KEY) {
@@ -22,20 +21,22 @@ class AIService {
     });
   }
 
-  async analyzeUserData(request: AIAnalysisRequest): Promise<AIAnalysisResponse> {
+  async analyzeUserData(request: AIAnalysisRequest, supabase: any): Promise<AIAnalysisResponse> {
     const startTime = Date.now();
     
     try {
       // Get analytics summary from database
       const analyticsSummary = await this.getAnalyticsSummary(
         request.user_id, 
-        request.landing_page_id
+        request.landing_page_id,
+        supabase
       );
 
       // Get existing suggestions to avoid duplicates
       const existingSuggestions = await this.getExistingSuggestions(
         request.user_id,
-        request.landing_page_id
+        request.landing_page_id,
+        supabase
       );
 
       // Generate AI analysis and suggestions
@@ -53,10 +54,10 @@ class AIService {
         trigger_event: request.trigger_event,
         analytics_snapshot: analyticsSummary.analytics,
         suggestions_generated: aiResponse.suggestions.length,
-        ai_model: 'gpt-4',
+        ai_model: 'gpt-4o-mini',
         processing_time_ms: Date.now() - startTime,
         tokens_used: aiResponse.tokensUsed,
-      });
+      }, supabase);
 
       // Save suggestions to database
       const savedSuggestions = await this.saveSuggestions(
@@ -65,7 +66,8 @@ class AIService {
           user_id: request.user_id,
           landing_page_id: request.landing_page_id,
           analytics_context: analyticsSummary.analytics,
-        }))
+        })),
+        supabase
       );
 
       return {
@@ -82,22 +84,76 @@ class AIService {
     }
   }
 
-  private async getAnalyticsSummary(userId: string, landingPageId: string): Promise<UserAnalyticsSummary> {
-    const { data, error } = await this.supabase
-      .rpc('get_user_analytics_summary', {
-        p_user_id: userId,
-        p_landing_page_id: landingPageId
-      });
+  private async getAnalyticsSummary(userId: string, landingPageId: string, supabase: any): Promise<UserAnalyticsSummary> {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_user_analytics_summary', {
+          p_user_id: userId,
+          p_landing_page_id: landingPageId
+        });
 
-    if (error) {
-      throw new Error(`Failed to get analytics summary: ${error.message}`);
+      if (error) {
+        console.error('Analytics summary error:', error);
+        // Return default data structure instead of throwing
+        return {
+          analytics: {
+            total_page_views: 0,
+            unique_visitors: 0,
+            total_cta_clicks: 0,
+            avg_session_duration: 0,
+            recent_page_views: 0,
+            recent_cta_clicks: 0,
+            conversion_rate: 0
+          },
+          content: {
+            name: 'Unnamed Page',
+            bio: '',
+            bio_word_count: 0,
+            services_count: 0,
+            highlights_count: 0,
+            testimonials_count: 0,
+            onboarding_data: null
+          },
+          recent_activity: {
+            content_changes_last_7_days: 0,
+            last_content_change: null
+          }
+        } as UserAnalyticsSummary;
+      }
+
+      return data as UserAnalyticsSummary;
+    } catch (error) {
+      console.error('Failed to get analytics summary:', error);
+      // Return default data structure
+      return {
+        analytics: {
+          total_page_views: 0,
+          unique_visitors: 0,
+          total_cta_clicks: 0,
+          avg_session_duration: 0,
+          recent_page_views: 0,
+          recent_cta_clicks: 0,
+          conversion_rate: 0
+        },
+        content: {
+          name: 'Unnamed Page',
+          bio: '',
+          bio_word_count: 0,
+          services_count: 0,
+          highlights_count: 0,
+          testimonials_count: 0,
+          onboarding_data: null
+        },
+        recent_activity: {
+          content_changes_last_7_days: 0,
+          last_content_change: null
+        }
+      } as UserAnalyticsSummary;
     }
-
-    return data as UserAnalyticsSummary;
   }
 
-  private async getExistingSuggestions(userId: string, landingPageId: string): Promise<AISuggestion[]> {
-    const { data, error } = await this.supabase
+  private async getExistingSuggestions(userId: string, landingPageId: string, supabase: any): Promise<AISuggestion[]> {
+    const { data, error } = await supabase
       .from('ai_suggestions')
       .select('*')
       .eq('user_id', userId)
@@ -121,14 +177,24 @@ class AIService {
     const systemPrompt = this.buildSystemPrompt();
     const userPrompt = this.buildUserPrompt(analyticsSummary, existingSuggestions, analysisType);
 
+    // Estimate input tokens (rough approximation: 1 token ≈ 4 characters)
+    const estimatedInputTokens = (systemPrompt.length + userPrompt.length) / 4;
+    
+    console.log('AI Analysis - Estimated input tokens:', Math.round(estimatedInputTokens));
+    
+    // Prevent requests that are too large
+    if (estimatedInputTokens > 8000) {
+      throw new Error('Input too large. Please reduce content length.');
+    }
+
     const completion = await this.openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o-mini', // Much cheaper than gpt-4, still very capable
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.7,
-      max_tokens: 2000,
+      max_tokens: 1500, // Reduced from 2000
       response_format: { type: 'json_object' }
     });
 
@@ -139,8 +205,13 @@ class AIService {
 
     try {
       const parsed = JSON.parse(response);
+      const rawSuggestions = parsed.suggestions || [];
+      
+      // Refine and consolidate suggestions to improve quality
+      const refinedSuggestions = await this.refineSuggestions(rawSuggestions, analyticsSummary, existingSuggestions);
+      
       return {
-        suggestions: parsed.suggestions || [],
+        suggestions: refinedSuggestions,
         tokensUsed: completion.usage?.total_tokens || 0
       };
     } catch (error) {
@@ -148,46 +219,197 @@ class AIService {
     }
   }
 
+  private async refineSuggestions(
+    rawSuggestions: Partial<AISuggestion>[],
+    analyticsSummary: UserAnalyticsSummary,
+    existingSuggestions: AISuggestion[]
+  ): Promise<Partial<AISuggestion>[]> {
+    // Step 1: Remove duplicates and similar suggestions
+    const deduplicatedSuggestions = this.removeDuplicateSuggestions(rawSuggestions, existingSuggestions);
+    
+    // Step 2: Consolidate similar suggestions by target section
+    const consolidatedSuggestions = this.consolidateSimilarSuggestions(deduplicatedSuggestions);
+    
+    // Step 3: Use AI to select the best 3 suggestions
+    const bestSuggestions = await this.selectBestSuggestions(consolidatedSuggestions, analyticsSummary);
+    
+    return bestSuggestions;
+  }
+
+  private removeDuplicateSuggestions(
+    rawSuggestions: Partial<AISuggestion>[],
+    existingSuggestions: AISuggestion[]
+  ): Partial<AISuggestion>[] {
+    const existingTitles = existingSuggestions.map(s => s.title.toLowerCase());
+    const existingTargets = existingSuggestions.map(s => s.target_section);
+    
+    return rawSuggestions.filter(suggestion => {
+      const title = suggestion.title?.toLowerCase() || '';
+      const target = suggestion.target_section;
+      
+      // Remove if title is too similar to existing
+      const isSimilarTitle = existingTitles.some(existing => 
+        this.calculateSimilarity(title, existing) > 0.7
+      );
+      
+      // Remove if targeting same section with similar content
+      const isDuplicateTarget = existingTargets.includes(target) && 
+        existingSuggestions.some(existing => 
+          existing.target_section === target && 
+          this.calculateSimilarity(title, existing.title.toLowerCase()) > 0.5
+        );
+      
+      return !isSimilarTitle && !isDuplicateTarget;
+    });
+  }
+
+  private consolidateSimilarSuggestions(suggestions: Partial<AISuggestion>[]): Partial<AISuggestion>[] {
+    const sectionGroups = new Map<string, Partial<AISuggestion>[]>();
+    
+    // Group by target section
+    suggestions.forEach(suggestion => {
+      const section = suggestion.target_section || 'general';
+      if (!sectionGroups.has(section)) {
+        sectionGroups.set(section, []);
+      }
+      sectionGroups.get(section)!.push(suggestion);
+    });
+    
+    const consolidated: Partial<AISuggestion>[] = [];
+    
+    // For each section, consolidate similar suggestions
+    sectionGroups.forEach((sectionSuggestions, section) => {
+      if (sectionSuggestions.length === 1) {
+        consolidated.push(sectionSuggestions[0]);
+      } else {
+        // If multiple suggestions for same section, pick the highest priority/confidence
+        const best = sectionSuggestions.reduce((prev, current) => {
+          const prevScore = this.getSuggestionScore(prev);
+          const currentScore = this.getSuggestionScore(current);
+          return currentScore > prevScore ? current : prev;
+        });
+        consolidated.push(best);
+      }
+    });
+    
+    return consolidated;
+  }
+
+  private async selectBestSuggestions(
+    suggestions: Partial<AISuggestion>[],
+    analyticsSummary: UserAnalyticsSummary
+  ): Promise<Partial<AISuggestion>[]> {
+    if (suggestions.length <= 3) {
+      return suggestions;
+    }
+    
+    // Use AI to select the best 3 suggestions
+    const selectionPrompt = `Given these ${suggestions.length} optimization suggestions, select the 3 BEST ones that will have the highest conversion impact for this landing page.
+
+Landing page data:
+- Page views: ${analyticsSummary.analytics.total_page_views}
+- CTA clicks: ${analyticsSummary.analytics.total_cta_clicks}
+- Conversion rate: ${analyticsSummary.analytics.conversion_rate}%
+- Content: ${analyticsSummary.content.services_count} services, ${analyticsSummary.content.testimonials_count} testimonials
+
+Suggestions to choose from:
+${suggestions.map((s, i) => `${i + 1}. ${s.title} (${s.priority} priority, ${s.target_section} section)`).join('\n')}
+
+Return JSON with the indices (1-based) of the 3 best suggestions:
+{"selected_indices": [1, 3, 5]}
+
+Choose based on:
+1. Highest potential conversion impact
+2. Addressing the biggest problems first
+3. Avoiding overlap between suggestions`;
+
+    try {
+      const completion = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: selectionPrompt }],
+        temperature: 0.3,
+        max_tokens: 100,
+        response_format: { type: 'json_object' }
+      });
+
+      const response = completion.choices[0]?.message?.content;
+      if (response) {
+        const parsed = JSON.parse(response);
+        const indices = parsed.selected_indices || [];
+        return indices.map((index: number) => suggestions[index - 1]).filter(Boolean);
+      }
+    } catch (error) {
+      console.warn('AI selection failed, using fallback logic:', error);
+    }
+    
+    // Fallback: sort by priority and confidence, take top 3
+    return suggestions
+      .sort((a, b) => this.getSuggestionScore(b) - this.getSuggestionScore(a))
+      .slice(0, 3);
+  }
+
+  private calculateSimilarity(str1: string, str2: string): number {
+    const words1 = str1.split(' ');
+    const words2 = str2.split(' ');
+    const intersection = words1.filter(word => words2.includes(word));
+    const union = [...new Set([...words1, ...words2])];
+    return intersection.length / union.length;
+  }
+
+  private getSuggestionScore(suggestion: Partial<AISuggestion>): number {
+    const priorityScore = suggestion.priority === 'high' ? 3 : suggestion.priority === 'medium' ? 2 : 1;
+    const confidenceScore = suggestion.confidence_score || 0.5;
+    return priorityScore * 2 + confidenceScore;
+  }
+
   private buildSystemPrompt(): string {
-    return `You are an expert marketing analyst and conversion optimization specialist. Your job is to analyze landing page performance data and provide actionable, specific suggestions to improve conversions and user engagement.
+    return `You are a conversion optimization expert. Analyze landing page data and provide 5-7 DIVERSE actionable suggestions.
 
-ANALYSIS FRAMEWORK:
-1. Performance Issues: Low conversion rates, high bounce rates, drop-off points
-2. Content Optimization: Headlines, copy, value propositions, call-to-actions
-3. User Experience: Navigation, layout, mobile experience
-4. Conversion Optimization: CTA placement, forms, social proof
-5. SEO & Discovery: Meta tags, content structure, keywords
+IMPORTANT: Generate more suggestions than needed - they will be filtered down to the best 3.
 
-SUGGESTION CRITERIA:
-- Be specific and actionable (avoid generic advice)
-- Prioritize based on potential impact vs effort
-- Consider the user's specific analytics data
-- Provide clear reasoning backed by data
-- Suggest concrete copy or content improvements
-- Consider the user's industry and target audience
+STRICT CONSTRAINTS - ONLY suggest changes the user can edit directly:
+✅ ALLOWED:
+- Text changes (headlines, descriptions, CTA button text)
+- Content reorganization (reorder sections, bullet points)
+- Adding/editing testimonials, reviews, or social proof
+- Bio/description improvements
+- Service/product descriptions
+- Call-to-action copy optimization
 
-RESPONSE FORMAT:
-Return a JSON object with this structure:
+❌ FORBIDDEN - NEVER suggest:
+- Page load speed improvements
+- Website design changes
+- Technical optimizations
+- New features or functionality
+- Analytics or tracking setup
+- Mobile responsiveness
+- SEO technical changes
+- Hosting or server changes
+- Development work of any kind
+
+DIVERSITY REQUIREMENTS:
+- Target DIFFERENT sections (bio, services, testimonials, cta, header)
+- Focus on DIFFERENT aspects (copy, social proof, value proposition)
+- Vary priority levels based on impact potential
+- Avoid duplicate suggestions for the same section
+
+Return JSON format:
 {
   "suggestions": [
     {
-      "suggestion_type": "performance|content|conversion|engagement|seo",
-      "title": "Clear, actionable title",
-      "description": "Detailed description of what to do",
-      "reasoning": "Why this suggestion will help, backed by their data",
+      "suggestion_type": "content|conversion|engagement",
+      "title": "Brief, clear action (must be copy/content only)",
+      "description": "What text to change or content to add (max 100 words)",
+      "reasoning": "Why this copy change helps conversion (max 50 words)",
       "priority": "high|medium|low",
       "target_section": "bio|services|highlights|testimonials|cta|header",
-      "suggested_content": "Specific copy or content suggestions if applicable",
+      "suggested_content": "Exact text or content to use",
       "confidence_score": 0.8
     }
   ]
 }
 
-IMPORTANT:
-- Only suggest improvements that are actually needed based on the data
-- Don't suggest changes to sections that are already performing well
-- Focus on the biggest opportunities for improvement
-- Be specific about what content to change and how`;
+REMEMBER: Generate diverse, high-quality suggestions - the best 3 will be automatically selected.`;
   }
 
   private buildUserPrompt(
@@ -202,54 +424,49 @@ IMPORTANT:
     const hasLowTraffic = analytics.total_page_views < 100;
     const hasLowConversion = conversionRate < 2;
     const hasNoClicks = analytics.total_cta_clicks === 0;
-    const recentActivity = recent_activity.content_changes_last_7_days > 0;
 
-    const existingTitles = existingSuggestions.map(s => s.title).join(', ');
+    // Truncate bio to max 200 characters to save tokens
+    const bioPreview = content.bio && content.bio.length > 200 
+      ? content.bio.substring(0, 200) + '...' 
+      : content.bio || '';
 
-    return `Please analyze this landing page and provide 3-5 specific, actionable suggestions for improvement.
+    // Only include first 3 existing suggestion titles to save tokens
+    const existingTitles = existingSuggestions.slice(0, 3).map(s => s.title).join(', ');
 
-USER'S LANDING PAGE DATA:
-Name: ${content.name}
-Bio: ${content.bio}
-Bio Length: ${content.bio_word_count} words
-Services: ${content.services_count} listed
-Highlights: ${content.highlights_count} listed  
-Testimonials: ${content.testimonials_count} listed
+    // Extract only key onboarding insights instead of full data
+    const onboardingInsights = content.onboarding_data ? 
+      `Industry: ${content.onboarding_data.industry || 'Unknown'}, Target: ${content.onboarding_data.target_audience || 'General'}` :
+      'No onboarding data';
 
-ANALYTICS PERFORMANCE:
-- Total Page Views: ${analytics.total_page_views}
-- Unique Visitors: ${analytics.unique_visitors}
-- Total CTA Clicks: ${analytics.total_cta_clicks}
-- Conversion Rate: ${conversionRate}%
-- Average Session Duration: ${analytics.avg_session_duration} seconds
-- Recent Page Views (7 days): ${analytics.recent_page_views}
-- Recent CTA Clicks (7 days): ${analytics.recent_cta_clicks}
+    return `Analyze landing page data and provide 3-5 optimization suggestions.
 
-RECENT ACTIVITY:
-- Content changes in last 7 days: ${recent_activity.content_changes_last_7_days}
-- Last content change: ${recent_activity.last_content_change || 'None'}
+PAGE: ${content.name}
+BIO: ${bioPreview}
+COUNTS: ${content.services_count} services, ${content.highlights_count} highlights, ${content.testimonials_count} testimonials
 
-ANALYSIS TYPE: ${analysisType}
+METRICS:
+- Views: ${analytics.total_page_views} total, ${analytics.recent_page_views} recent
+- Visitors: ${analytics.unique_visitors}
+- CTA Clicks: ${analytics.total_cta_clicks} total, ${analytics.recent_cta_clicks} recent  
+- Conversion: ${conversionRate}%
+- Session: ${analytics.avg_session_duration}s avg
 
-EXISTING SUGGESTIONS (don't duplicate):
-${existingTitles || 'None'}
+ISSUES:
+${hasLowTraffic ? '- Low traffic' : ''}
+${hasLowConversion ? '- Low conversion' : ''}
+${hasNoClicks ? '- No CTA clicks' : ''}
+${content.bio_word_count > 100 ? '- Bio too long' : ''}
+${content.bio_word_count < 20 ? '- Bio too short' : ''}
+${content.services_count === 0 ? '- No services' : ''}
 
-KEY ISSUES TO ADDRESS:
-${hasLowTraffic ? '- Low traffic volume needs attention' : ''}
-${hasLowConversion ? '- Low conversion rate needs optimization' : ''}
-${hasNoClicks ? '- No CTA clicks detected - critical issue' : ''}
-${content.bio_word_count > 100 ? '- Bio may be too long' : ''}
-${content.bio_word_count < 20 ? '- Bio may be too short' : ''}
-${content.services_count === 0 ? '- No services listed' : ''}
+CONTEXT: ${onboardingInsights}
+EXISTING: ${existingTitles || 'None'}
 
-ONBOARDING DATA CONTEXT:
-${content.onboarding_data ? JSON.stringify(content.onboarding_data, null, 2) : 'No onboarding data available'}
-
-Focus on the most impactful suggestions that will directly improve their conversion rate and user engagement. Be specific about what to change and why.`;
+Focus on highest impact optimizations.`;
   }
 
-  private async saveAnalysisSession(session: Omit<AIAnalysisSession, 'id' | 'created_at'>): Promise<string> {
-    const { data, error } = await this.supabase
+  private async saveAnalysisSession(session: Omit<AIAnalysisSession, 'id' | 'created_at'>, supabase: any): Promise<string> {
+    const { data, error } = await supabase
       .from('ai_analysis_sessions')
       .insert(session)
       .select('id')
@@ -262,14 +479,14 @@ Focus on the most impactful suggestions that will directly improve their convers
     return data.id;
   }
 
-  private async saveSuggestions(suggestions: Omit<AISuggestion, 'id' | 'created_at' | 'updated_at'>[]): Promise<AISuggestion[]> {
+  private async saveSuggestions(suggestions: Omit<AISuggestion, 'id' | 'created_at' | 'updated_at'>[], supabase: any): Promise<AISuggestion[]> {
     if (suggestions.length === 0) return [];
 
-    const { data, error } = await this.supabase
+    const { data, error } = await supabase
       .from('ai_suggestions')
       .insert(suggestions.map(s => ({
         ...s,
-        ai_model: 'gpt-4',
+        ai_model: 'gpt-4o-mini',
         ai_prompt_version: 'v1.0',
         status: 'pending'
       })))
@@ -286,11 +503,12 @@ Focus on the most impactful suggestions that will directly improve their convers
     suggestionId: string,
     implementationContent: string,
     implementationNotes?: string,
-    partialImplementation?: boolean
+    partialImplementation?: boolean,
+    supabase: any
   ): Promise<void> {
     try {
       // Get the suggestion
-      const { data: suggestion, error: suggestionError } = await this.supabase
+      const { data: suggestion, error: suggestionError } = await supabase
         .from('ai_suggestions')
         .select('*')
         .eq('id', suggestionId)
@@ -303,11 +521,12 @@ Focus on the most impactful suggestions that will directly improve their convers
       // Get before analytics
       const beforeAnalytics = await this.getAnalyticsSummary(
         suggestion.user_id,
-        suggestion.landing_page_id
+        suggestion.landing_page_id,
+        supabase
       );
 
       // Update suggestion status
-      const { error: updateError } = await this.supabase
+      const { error: updateError } = await supabase
         .from('ai_suggestions')
         .update({
           status: 'implemented',
@@ -320,7 +539,7 @@ Focus on the most impactful suggestions that will directly improve their convers
       }
 
       // Create implementation record
-      const { error: implementError } = await this.supabase
+      const { error: implementError } = await supabase
         .from('suggestion_implementations')
         .insert({
           suggestion_id: suggestionId,
@@ -341,8 +560,8 @@ Focus on the most impactful suggestions that will directly improve their convers
     }
   }
 
-  async dismissSuggestion(suggestionId: string): Promise<void> {
-    const { error } = await this.supabase
+  async dismissSuggestion(suggestionId: string, supabase: any): Promise<void> {
+    const { error } = await supabase
       .from('ai_suggestions')
       .update({
         status: 'dismissed',
@@ -360,9 +579,10 @@ Focus on the most impactful suggestions that will directly improve their convers
     userId: string,
     rating?: number,
     feedbackText?: string,
-    isHelpful?: boolean
+    isHelpful?: boolean,
+    supabase: any
   ): Promise<void> {
-    const { error } = await this.supabase
+    const { error } = await supabase
       .from('suggestion_feedback')
       .insert({
         suggestion_id: suggestionId,
@@ -377,8 +597,8 @@ Focus on the most impactful suggestions that will directly improve their convers
     }
   }
 
-  async getSuggestions(userId: string, landingPageId: string, status?: string): Promise<AISuggestion[]> {
-    let query = this.supabase
+  async getSuggestions(userId: string, landingPageId: string, status?: string, supabase: any): Promise<AISuggestion[]> {
+    let query = supabase
       .from('ai_suggestions')
       .select('*')
       .eq('user_id', userId)
@@ -397,10 +617,10 @@ Focus on the most impactful suggestions that will directly improve their convers
     return data || [];
   }
 
-  async measureImpact(implementationId: string): Promise<void> {
+  async measureImpact(implementationId: string, supabase: any): Promise<void> {
     try {
       // Get implementation details
-      const { data: implementation, error: implError } = await this.supabase
+      const { data: implementation, error: implError } = await supabase
         .from('suggestion_implementations')
         .select(`
           *,
@@ -416,11 +636,12 @@ Focus on the most impactful suggestions that will directly improve their convers
       // Get current analytics (after implementation)
       const afterAnalytics = await this.getAnalyticsSummary(
         implementation.ai_suggestions.user_id,
-        implementation.ai_suggestions.landing_page_id
+        implementation.ai_suggestions.landing_page_id,
+        supabase
       );
 
       // Update implementation with after analytics
-      const { error: updateError } = await this.supabase
+      const { error: updateError } = await supabase
         .from('suggestion_implementations')
         .update({
           after_analytics: afterAnalytics.analytics,

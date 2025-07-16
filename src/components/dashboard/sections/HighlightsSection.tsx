@@ -4,15 +4,32 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Plus, Edit2, Trash2, Save, Loader2, Star } from "lucide-react"
+import { Plus, Edit2, Trash2, Save, Loader2, Star, GripVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { FormField } from "@/components/ui/form-field"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Highlight, DashboardData } from "@/types/dashboard"
 import { DashboardServiceClient } from "@/lib/supabase/dashboard-service-client"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 
 const highlightSchema = z.object({
   header: z.string().min(3, "Header must be at least 3 characters"),
@@ -27,12 +44,121 @@ interface HighlightsSectionProps {
   onUpdate: (data: Partial<DashboardData>) => void
 }
 
+interface SortableHighlightCardProps {
+  highlight: Highlight
+  onEdit: (highlight: Highlight) => void
+  onDelete: (highlightId: string) => void
+}
+
+function SortableHighlightCard({ highlight, onEdit, onDelete }: SortableHighlightCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: highlight.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className={`relative ${isDragging ? "opacity-50" : ""}`}
+    >
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="cursor-grab active:cursor-grabbing p-1"
+                    {...attributes}
+                    {...listeners}
+                  >
+                    <GripVertical className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  <p>Drag to reorder</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <CardTitle className="subtitle-3">{highlight.header}</CardTitle>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(highlight)}
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(highlight.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <p className="text-description">
+          {highlight.content}
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function HighlightsSection({ highlights, landingPageId, onUpdate }: HighlightsSectionProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingHighlight, setEditingHighlight] = useState<Highlight | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   
   const dashboardService = new DashboardServiceClient()
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (active.id !== over?.id) {
+      const oldIndex = highlights.findIndex((item) => item.id === active.id)
+      const newIndex = highlights.findIndex((item) => item.id === over?.id)
+
+      const newHighlights = [...highlights]
+      const [reorderedItem] = newHighlights.splice(oldIndex, 1)
+      newHighlights.splice(newIndex, 0, reorderedItem)
+
+      // Update local state immediately
+      onUpdate({ highlights: newHighlights })
+
+      // Persist to database
+      try {
+        await dashboardService.updateHighlightsOrder(newHighlights)
+      } catch (error) {
+        console.error('Error updating highlights order:', error)
+        // Revert on error
+        onUpdate({ highlights })
+      }
+    }
+  }
 
   const form = useForm<HighlightFormData>({
     resolver: zodResolver(highlightSchema),
@@ -174,38 +300,24 @@ export function HighlightsSection({ highlights, landingPageId, onUpdate }: Highl
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-        {highlights.map((highlight) => (
-          <Card key={highlight.id}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <CardTitle className="subtitle-3">{highlight.header}</CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditHighlight(highlight)}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteHighlight(highlight.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-description">
-                {highlight.content}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={highlights.map(h => h.id)} strategy={verticalListSortingStrategy}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+            {highlights.map((highlight) => (
+              <SortableHighlightCard
+                key={highlight.id}
+                highlight={highlight}
+                onEdit={handleEditHighlight}
+                onDelete={handleDeleteHighlight}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       {highlights.length === 0 && (
         <Card className="text-center py-12">

@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Plus, Edit2, Trash2, Save, Loader2, Youtube, Briefcase } from "lucide-react"
+import { Plus, Edit2, Trash2, Save, Loader2, Youtube, Briefcase, GripVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { FormField } from "@/components/ui/form-field"
@@ -12,9 +12,26 @@ import { MultiFileInput } from "@/components/ui/multi-file-input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Service, DashboardData, CreateServiceInput } from "@/types/dashboard"
 import { DashboardServiceClient } from "@/lib/supabase/dashboard-service-client"
 import { createClient } from "@/lib/supabase/client"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 
 const serviceSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
@@ -33,6 +50,118 @@ interface ServicesSectionProps {
   onUpdate: (data: Partial<DashboardData>) => void
 }
 
+interface SortableServiceCardProps {
+  service: Service
+  onEdit: (service: Service) => void
+  onDelete: (serviceId: string) => void
+}
+
+function SortableServiceCard({ service, onEdit, onDelete }: SortableServiceCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: service.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className={`relative ${isDragging ? "opacity-50" : ""}`}
+    >
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="cursor-grab active:cursor-grabbing p-1"
+                    {...attributes}
+                    {...listeners}
+                  >
+                    <GripVertical className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  <p>Drag to reorder</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <div>
+              <CardTitle className="subtitle-3">{service.title}</CardTitle>
+              {service.price && (
+                <p className="text-description">{service.price}</p>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(service)}
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(service.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <p className="paragraph mb-4">
+          {service.description}
+        </p>
+        
+        {service.image_urls.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {service.image_urls.map((imageUrl, index) => (
+              <img
+                key={index}
+                src={imageUrl}
+                alt={`${service.title} image ${index + 1}`}
+                className="w-16 h-16 object-cover rounded"
+              />
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center gap-4 text-description">
+          {service.button_text && service.button_url && (
+            <span>Button: {service.button_text}</span>
+          )}
+          {service.youtube_url && (
+            <a
+              href={service.youtube_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 hover:text-foreground"
+            >
+              <Youtube className="h-4 w-4" />
+              Video
+            </a>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function ServicesSection({ services, landingPageId, onUpdate }: ServicesSectionProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingService, setEditingService] = useState<Service | null>(null)
@@ -40,6 +169,38 @@ export function ServicesSection({ services, landingPageId, onUpdate }: ServicesS
   
   const supabase = createClient()
   const dashboardService = new DashboardServiceClient()
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (active.id !== over?.id) {
+      const oldIndex = services.findIndex((item) => item.id === active.id)
+      const newIndex = services.findIndex((item) => item.id === over?.id)
+
+      const newServices = [...services]
+      const [reorderedItem] = newServices.splice(oldIndex, 1)
+      newServices.splice(newIndex, 0, reorderedItem)
+
+      // Update local state immediately
+      onUpdate({ services: newServices })
+
+      // Persist to database
+      try {
+        await dashboardService.updateServicesOrder(newServices)
+      } catch (error) {
+        console.error('Error updating services order:', error)
+        // Revert on error
+        onUpdate({ services })
+      }
+    }
+  }
 
   const form = useForm<ServiceFormData>({
     resolver: zodResolver(serviceSchema),
@@ -283,73 +444,24 @@ export function ServicesSection({ services, landingPageId, onUpdate }: ServicesS
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-        {services.map((service) => (
-          <Card key={service.id} className="relative">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="subtitle-3">{service.title}</CardTitle>
-                  {service.price && (
-                    <p className="text-description">{service.price}</p>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditService(service)}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteService(service.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="paragraph mb-4">
-                {service.description}
-              </p>
-              
-              {service.image_urls.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {service.image_urls.map((imageUrl, index) => (
-                    <img
-                      key={index}
-                      src={imageUrl}
-                      alt={`${service.title} image ${index + 1}`}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                  ))}
-                </div>
-              )}
-
-              <div className="flex items-center gap-4 text-description">
-                {service.button_text && service.button_url && (
-                  <span>Button: {service.button_text}</span>
-                )}
-                {service.youtube_url && (
-                  <a
-                    href={service.youtube_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 hover:text-foreground"
-                  >
-                    <Youtube className="h-4 w-4" />
-                    Video
-                  </a>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={services.map(s => s.id)} strategy={verticalListSortingStrategy}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+            {services.map((service) => (
+              <SortableServiceCard
+                key={service.id}
+                service={service}
+                onEdit={handleEditService}
+                onDelete={handleDeleteService}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       {services.length === 0 && (
         <Card className="text-center py-12">

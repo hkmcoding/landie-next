@@ -236,31 +236,89 @@ export class AnalyticsProcessor {
       recommendations: string[];
     };
   }> {
-    // Get daily analytics for the specified period
-    const { data: dailyData, error } = await this.supabase
-      .from('analytics')
-      .select(`
-        created_at,
-        page_views(view_count),
-        cta_clicks(click_count)
-      `)
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    // Get page views data
+    const { data: pageViewsData, error: pageViewsError } = await this.supabase
+      .from('page_views')
+      .select('created_at')
       .eq('landing_page_id', landingPageId)
-      .gte('created_at', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString())
+      .gte('created_at', startDate)
       .order('created_at', { ascending: true });
 
-    if (error) {
-      throw new Error(`Failed to get analytics trends: ${error.message}`);
+    if (pageViewsError) {
+      throw new Error(`Failed to get page views trends: ${pageViewsError.message}`);
     }
 
-    // Process daily data into trends
-    const trends = this.processDataIntoTrends(dailyData || []);
+    // Get CTA clicks data
+    const { data: ctaClicksData, error: ctaClicksError } = await this.supabase
+      .from('cta_clicks')
+      .select('created_at')
+      .eq('landing_page_id', landingPageId)
+      .gte('created_at', startDate)
+      .order('created_at', { ascending: true });
+
+    if (ctaClicksError) {
+      throw new Error(`Failed to get CTA clicks trends: ${ctaClicksError.message}`);
+    }
+
+    // Process data into daily trends
+    const trends = this.processAnalyticsIntoTrends(pageViewsData || [], ctaClicksData || [], days);
     const insights = this.analyzeTrends(trends);
 
     return { trends, insights };
   }
 
   /**
-   * Process raw analytics data into trend format
+   * Process separate analytics data into trend format
+   */
+  private processAnalyticsIntoTrends(
+    pageViewsData: any[],
+    ctaClicksData: any[],
+    days: number
+  ): {
+    pageViews: { date: string; value: number }[];
+    ctaClicks: { date: string; value: number }[];
+    conversionRate: { date: string; value: number }[];
+  } {
+    const dailyStats = new Map<string, { pageViews: number; ctaClicks: number }>();
+
+    // Process page views
+    pageViewsData.forEach(record => {
+      const date = new Date(record.created_at).toISOString().split('T')[0];
+      const existing = dailyStats.get(date) || { pageViews: 0, ctaClicks: 0 };
+      existing.pageViews += 1;
+      dailyStats.set(date, existing);
+    });
+
+    // Process CTA clicks
+    ctaClicksData.forEach(record => {
+      const date = new Date(record.created_at).toISOString().split('T')[0];
+      const existing = dailyStats.get(date) || { pageViews: 0, ctaClicks: 0 };
+      existing.ctaClicks += 1;
+      dailyStats.set(date, existing);
+    });
+
+    // Convert to arrays
+    const pageViews: { date: string; value: number }[] = [];
+    const ctaClicks: { date: string; value: number }[] = [];
+    const conversionRate: { date: string; value: number }[] = [];
+
+    Array.from(dailyStats.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .forEach(([date, stats]) => {
+        pageViews.push({ date, value: stats.pageViews });
+        ctaClicks.push({ date, value: stats.ctaClicks });
+        
+        const rate = stats.pageViews > 0 ? (stats.ctaClicks / stats.pageViews) * 100 : 0;
+        conversionRate.push({ date, value: rate });
+      });
+
+    return { pageViews, ctaClicks, conversionRate };
+  }
+
+  /**
+   * Process raw analytics data into trend format (legacy method)
    */
   private processDataIntoTrends(data: any[]): {
     pageViews: { date: string; value: number }[];

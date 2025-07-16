@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Plus, Edit2, Trash2, Save, Loader2, MessageSquare, Youtube } from "lucide-react"
+import { Plus, Edit2, Trash2, Save, Loader2, MessageSquare, Youtube, GripVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { FormField } from "@/components/ui/form-field"
@@ -12,9 +12,26 @@ import { MultiFileInput } from "@/components/ui/multi-file-input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Testimonial, DashboardData, CreateTestimonialInput } from "@/types/dashboard"
 import { DashboardServiceClient } from "@/lib/supabase/dashboard-service-client"
 import { createClient } from "@/lib/supabase/client"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 
 const testimonialSchema = z.object({
   quote: z.string().min(10, "Quote must be at least 10 characters"),
@@ -31,6 +48,113 @@ interface TestimonialsSectionProps {
   onUpdate: (data: Partial<DashboardData>) => void
 }
 
+interface SortableTestimonialCardProps {
+  testimonial: Testimonial
+  onEdit: (testimonial: Testimonial) => void
+  onDelete: (testimonialId: string) => void
+}
+
+function SortableTestimonialCard({ testimonial, onEdit, onDelete }: SortableTestimonialCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: testimonial.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className={`relative ${isDragging ? "opacity-50" : ""}`}
+    >
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="cursor-grab active:cursor-grabbing p-1"
+                    {...attributes}
+                    {...listeners}
+                  >
+                    <GripVertical className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  <p>Drag to reorder</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <div>
+              <CardTitle className="subtitle-3">{testimonial.author_name}</CardTitle>
+              <p className="text-description">{testimonial.description}</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(testimonial)}
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(testimonial.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <blockquote className="caption italic mb-4 border-l-4 border-muted pl-4">
+          "{testimonial.quote}"
+        </blockquote>
+        
+        {testimonial.image_urls.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {testimonial.image_urls.map((imageUrl, index) => (
+              <img
+                key={index}
+                src={imageUrl}
+                alt={`${testimonial.author_name} image ${index + 1}`}
+                className="w-16 h-16 object-cover rounded"
+              />
+            ))}
+          </div>
+        )}
+
+        {testimonial.youtube_url && (
+          <div className="flex items-center gap-2">
+            <a
+              href={testimonial.youtube_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-description hover:text-foreground"
+            >
+              <Youtube className="h-4 w-4" />
+              Video
+            </a>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export function TestimonialsSection({ testimonials, landingPageId, onUpdate }: TestimonialsSectionProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingTestimonial, setEditingTestimonial] = useState<Testimonial | null>(null)
@@ -38,6 +162,38 @@ export function TestimonialsSection({ testimonials, landingPageId, onUpdate }: T
   
   const supabase = createClient()
   const dashboardService = new DashboardServiceClient()
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (active.id !== over?.id) {
+      const oldIndex = testimonials.findIndex((item) => item.id === active.id)
+      const newIndex = testimonials.findIndex((item) => item.id === over?.id)
+
+      const newTestimonials = [...testimonials]
+      const [reorderedItem] = newTestimonials.splice(oldIndex, 1)
+      newTestimonials.splice(newIndex, 0, reorderedItem)
+
+      // Update local state immediately
+      onUpdate({ testimonials: newTestimonials })
+
+      // Persist to database
+      try {
+        await dashboardService.updateTestimonialsOrder(newTestimonials)
+      } catch (error) {
+        console.error('Error updating testimonials order:', error)
+        // Revert on error
+        onUpdate({ testimonials })
+      }
+    }
+  }
 
   const form = useForm<TestimonialFormData>({
     resolver: zodResolver(testimonialSchema),
@@ -264,68 +420,24 @@ export function TestimonialsSection({ testimonials, landingPageId, onUpdate }: T
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-        {testimonials.map((testimonial) => (
-          <Card key={testimonial.id}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="subtitle-3">{testimonial.author_name}</CardTitle>
-                  <p className="text-description">{testimonial.description}</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditTestimonial(testimonial)}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteTestimonial(testimonial.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <blockquote className="caption italic mb-4 border-l-4 border-muted pl-4">
-                "{testimonial.quote}"
-              </blockquote>
-              
-              {testimonial.image_urls.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {testimonial.image_urls.map((imageUrl, index) => (
-                    <img
-                      key={index}
-                      src={imageUrl}
-                      alt={`${testimonial.author_name} image ${index + 1}`}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                  ))}
-                </div>
-              )}
-
-              {testimonial.youtube_url && (
-                <div className="flex items-center gap-2">
-                  <a
-                    href={testimonial.youtube_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-description hover:text-foreground"
-                  >
-                    <Youtube className="h-4 w-4" />
-                    Video
-                  </a>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={testimonials.map(t => t.id)} strategy={verticalListSortingStrategy}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+            {testimonials.map((testimonial) => (
+              <SortableTestimonialCard
+                key={testimonial.id}
+                testimonial={testimonial}
+                onEdit={handleEditTestimonial}
+                onDelete={handleDeleteTestimonial}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       {testimonials.length === 0 && (
         <Card className="text-center py-12">

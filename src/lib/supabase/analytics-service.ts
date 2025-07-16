@@ -17,6 +17,62 @@ export class AnalyticsService {
   private supabase = createClient()
 
   async getAnalyticsData(userId: string, landingPageId: string, isPro: boolean = false): Promise<AnalyticsData> {
+    // Get aggregated analytics summary for consistency with pro analytics
+    const { data: summary, error: summaryError } = await this.supabase
+      .rpc('get_user_analytics_summary', {
+        p_user_id: userId,
+        p_landing_page_id: landingPageId
+      });
+
+    // If summary fails, fall back to individual queries
+    if (summaryError || !summary) {
+      console.warn('Analytics summary failed, falling back to individual queries:', summaryError);
+      return this.getFallbackAnalyticsData(userId, landingPageId, isPro);
+    }
+
+    const basicPromises = [
+      this.getCtaClicks(userId, landingPageId),
+      this.getAveragePageSession(userId, landingPageId),
+      this.getUniqueVisits(userId, landingPageId),
+      this.getPageViews(userId, landingPageId)
+    ]
+
+    const proPromises = isPro ? [
+      this.getViewsOverTime(userId, landingPageId),
+      this.getCtaClicksOverTime(userId, landingPageId),
+      this.getSectionDropoff(userId, landingPageId),
+      this.getSectionToCtaConversion(userId, landingPageId),
+      this.getContentChanges(userId, landingPageId),
+      this.getSectionViewEvents(userId, landingPageId)
+    ] : []
+
+    const allResults = await Promise.all([...basicPromises, ...proPromises])
+
+    // Use database function counts instead of array lengths for consistency
+    const result: AnalyticsData = {
+      ctaClicks: (allResults[0] as CtaClick[]) || [],
+      averagePageSession: (allResults[1] as PageTimeMV) || null,
+      uniqueVisits: (allResults[2] as UniqueVisitor[]) || [],
+      pageViews: (allResults[3] as PageView[]) || [],
+      // Add aggregated counts from database function
+      totalPageViews: summary.analytics?.total_page_views || 0,
+      totalCtaClicks: summary.analytics?.total_cta_clicks || 0,
+      totalUniqueVisitors: summary.analytics?.unique_visitors || 0
+    }
+
+    if (isPro && allResults.length > 4) {
+      result.viewsOverTime = (allResults[4] as PageViewsHourlyMV[]) || []
+      result.ctaClicksOverTime = (allResults[5] as CtaClicksHourlyMV[]) || []
+      result.sectionDropoff = (allResults[6] as SectionDropoffMV[]) || []
+      result.sectionToCtaConversion = (allResults[7] as SectionToCtaMV[]) || []
+      result.contentChanges = (allResults[8] as ContentChange[]) || []
+      result.sectionViewEvents = (allResults[9] as SectionViewEvent[]) || []
+    }
+
+    return result
+  }
+
+  private async getFallbackAnalyticsData(userId: string, landingPageId: string, isPro: boolean = false): Promise<AnalyticsData> {
     const basicPromises = [
       this.getCtaClicks(userId, landingPageId),
       this.getAveragePageSession(userId, landingPageId),
@@ -39,7 +95,11 @@ export class AnalyticsService {
       ctaClicks: (allResults[0] as CtaClick[]) || [],
       averagePageSession: (allResults[1] as PageTimeMV) || null,
       uniqueVisits: (allResults[2] as UniqueVisitor[]) || [],
-      pageViews: (allResults[3] as PageView[]) || []
+      pageViews: (allResults[3] as PageView[]) || [],
+      // Use array lengths as fallback
+      totalPageViews: ((allResults[3] as PageView[]) || []).length,
+      totalCtaClicks: ((allResults[0] as CtaClick[]) || []).length,
+      totalUniqueVisitors: ((allResults[2] as UniqueVisitor[]) || []).length
     }
 
     if (isPro && allResults.length > 4) {

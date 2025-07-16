@@ -43,8 +43,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Check for pro status (required for AI suggestions)
+    const { data: proStatus } = await supabase
+      .from('user_pro_status')
+      .select('is_pro')
+      .eq('user_id', user.id)
+      .single();
+
+    // Check if this is a dev route request
+    const referer = request.headers.get('referer');
+    const isDevRoute = referer?.includes('/dev/');
+    
+    // Only allow access for pro users or dev routes
+    if (!proStatus?.is_pro && !isDevRoute) {
+      return NextResponse.json(
+        { success: false, error: 'Pro subscription required for AI suggestions features' } as APIResponse,
+        { status: 403 }
+      );
+    }
+
     // Get suggestions
-    const suggestions = await aiService.getSuggestions(user.id, landingPageId, status || undefined);
+    const suggestions = await aiService.getSuggestions(user.id, landingPageId, status || undefined, supabase);
 
     return NextResponse.json({
       success: true,

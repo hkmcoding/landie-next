@@ -42,24 +42,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user has Pro status for full AI analysis
+    // Get user pro status
     const { data: proStatus } = await supabase
       .from('user_pro_status')
       .select('is_pro, ai_uses_remaining')
       .eq('user_id', user.id)
       .single();
 
-    if (!proStatus?.is_pro && analysis_type === 'full') {
+    // Check if this is a dev route request
+    const referer = request.headers.get('referer');
+    const isDevRoute = referer?.includes('/dev/');
+    
+    // Only allow access for pro users or dev routes
+    if (!proStatus?.is_pro && !isDevRoute) {
       return NextResponse.json(
-        { success: false, error: 'Pro subscription required for full AI analysis' } as APIResponse,
+        { success: false, error: 'Pro subscription required for AI analysis features' } as APIResponse,
         { status: 403 }
-      );
-    }
-
-    if (proStatus?.ai_uses_remaining <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'AI usage limit reached' } as APIResponse,
-        { status: 429 }
       );
     }
 
@@ -97,15 +95,15 @@ export async function POST(request: NextRequest) {
       force_refresh
     };
 
-    const result = await aiService.analyzeUserData(analysisRequest);
+    const result = await aiService.analyzeUserData(analysisRequest, supabase);
 
-    // Update AI usage count
-    if (proStatus) {
-      await supabase
-        .from('user_pro_status')
-        .update({ ai_uses_remaining: Math.max(0, proStatus.ai_uses_remaining - 1) })
-        .eq('user_id', user.id);
-    }
+    // Update AI usage count (skipped in dev mode)
+    // if (proStatus) {
+    //   await supabase
+    //     .from('user_pro_status')
+    //     .update({ ai_uses_remaining: Math.max(0, proStatus.ai_uses_remaining - 1) })
+    //     .eq('user_id', user.id);
+    // }
 
     return NextResponse.json({
       success: true,

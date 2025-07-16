@@ -19,7 +19,7 @@ export async function PATCH(
       );
     }
 
-    const suggestionId = params.id;
+    const suggestionId = (await params).id;
     if (!suggestionId) {
       return NextResponse.json(
         { success: false, error: 'Suggestion ID is required' } as APIResponse,
@@ -76,14 +76,15 @@ export async function PATCH(
           suggestionId,
           implementation_content,
           implementation_notes,
-          partial_implementation
+          partial_implementation,
+          supabase
         );
         
         result.message = 'Suggestion implemented successfully';
         break;
 
       case 'dismiss':
-        await aiService.dismissSuggestion(suggestionId);
+        await aiService.dismissSuggestion(suggestionId, supabase);
         result.message = 'Suggestion dismissed successfully';
         break;
 
@@ -136,7 +137,7 @@ export async function DELETE(
       );
     }
 
-    const suggestionId = params.id;
+    const suggestionId = (await params).id;
 
     // Delete suggestion (this will cascade to related tables)
     const { error: deleteError } = await supabase

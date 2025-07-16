@@ -248,6 +248,10 @@ export interface AnalyticsData {
   averagePageSession: PageTimeMV | null;
   uniqueVisits: UniqueVisitor[];
   pageViews: PageView[];
+  // Aggregated totals for consistency with pro analytics
+  totalPageViews?: number;
+  totalCtaClicks?: number;
+  totalUniqueVisitors?: number;
   viewsOverTime?: PageViewsHourlyMV[];
   ctaClicksOverTime?: CtaClicksHourlyMV[];
   sectionDropoff?: SectionDropoffMV[];

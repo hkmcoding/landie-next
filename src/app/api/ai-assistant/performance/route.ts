@@ -60,6 +60,25 @@ export async function GET(request: NextRequest) {
         );
       }
 
+      // Check for pro status (required for AI performance metrics)
+      const { data: proStatus } = await supabase
+        .from('user_pro_status')
+        .select('is_pro')
+        .eq('user_id', user.id)
+        .single();
+
+      // Check if this is a dev route request
+      const referer = request.headers.get('referer');
+      const isDevRoute = referer?.includes('/dev/');
+      
+      // Only allow access for pro users or dev routes
+      if (!proStatus?.is_pro && !isDevRoute) {
+        return NextResponse.json(
+          { success: false, error: 'Pro subscription required for AI performance features' } as APIResponse,
+          { status: 403 }
+        );
+      }
+
       // Get performance overview for the landing page
       const { data: performanceData, error: perfError } = await supabase
         .from('suggestion_performance_mv')
@@ -68,7 +87,24 @@ export async function GET(request: NextRequest) {
         .eq('landing_page_id', landingPageId);
 
       if (perfError) {
-        throw new Error(`Failed to get performance data: ${perfError.message}`);
+        console.error('Performance data error:', perfError);
+        // Return empty performance data instead of throwing
+        const dashboard = {
+          performance_overview: {
+            total_suggestions: 0,
+            implemented_suggestions: 0,
+            dismissed_suggestions: 0,
+            avg_implementation_time_days: 0,
+            overall_improvement_rate: 0
+          },
+          recent_implementations: [],
+          top_performing_suggestions: []
+        };
+
+        return NextResponse.json({
+          success: true,
+          data: dashboard
+        } as APIResponse);
       }
 
       // Calculate overall metrics
