@@ -93,7 +93,7 @@ export function AnalyticsSection({ dashboardData, userId }: AnalyticsSectionProp
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="marketing">
+          <TabsTrigger value="marketing" disabled={!isPro}>
             AI Marketing Assistant
           </TabsTrigger>
         </TabsList>

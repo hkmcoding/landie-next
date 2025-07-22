@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -33,10 +33,20 @@ export function CallToActionSection({ landingPage, onUpdate }: CallToActionSecti
   const form = useForm<CTAFormData>({
     resolver: zodResolver(ctaSchema),
     defaultValues: {
-      cta_text: landingPage?.cta_text || "",
-      cta_url: landingPage?.cta_url || "",
+      cta_text: "",
+      cta_url: "",
     },
   })
+
+  // Update form when landingPage data changes
+  useEffect(() => {
+    if (landingPage) {
+      form.reset({
+        cta_text: landingPage.cta_text || "",
+        cta_url: landingPage.cta_url || "",
+      })
+    }
+  }, [landingPage, form])
 
   const onSubmit = async (data: CTAFormData) => {
     try {

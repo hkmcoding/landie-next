@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from 'next/image'
 import { cn } from "@/lib/utils"
 import { Upload, X } from "lucide-react"
 
@@ -122,10 +123,15 @@ const MultiFileInput = React.forwardRef<HTMLInputElement, MultiFileInputProps>(
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
               {existingImages.map((imageUrl, index) => (
                 <div key={`existing-${index}`} className="relative group">
-                  <img
+                  <Image
                     src={imageUrl}
                     alt={`Existing image ${index + 1}`}
+                    width={80}
+                    height={80}
                     className="w-full h-20 object-cover rounded-md border"
+                    priority={false}
+                    loading="lazy"
+                    sizes="80px"
                   />
                   {onRemoveExistingImage && (
                     <button

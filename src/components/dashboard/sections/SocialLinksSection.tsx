@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -34,11 +34,22 @@ export function SocialLinksSection({ landingPage, onUpdate }: SocialLinksSection
   const form = useForm<SocialLinksFormData>({
     resolver: zodResolver(socialLinksSchema),
     defaultValues: {
-      instagram_url: landingPage?.instagram_url || "",
-      youtube_url: landingPage?.youtube_url || "",
-      tiktok_url: landingPage?.tiktok_url || "",
+      instagram_url: "",
+      youtube_url: "",
+      tiktok_url: "",
     },
   })
+
+  // Update form when landingPage data changes
+  useEffect(() => {
+    if (landingPage) {
+      form.reset({
+        instagram_url: landingPage.instagram_url || "",
+        youtube_url: landingPage.youtube_url || "",
+        tiktok_url: landingPage.tiktok_url || "",
+      })
+    }
+  }, [landingPage, form])
 
   const onSubmit = async (data: SocialLinksFormData) => {
     try {

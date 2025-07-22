@@ -37,6 +37,10 @@ export function AboutSection({ landingPage, onUpdate }: AboutSectionProps) {
     },
   })
 
+  console.log('hi')
+
+  console.log('landingPage', landingPage)
+
   const onSubmit = async (data: AboutFormData) => {
     try {
       setIsLoading(true)

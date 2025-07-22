@@ -1,4 +1,3 @@
-import "../../../typography.css";
 
 export default function TypographyTestPage() {
   // Only show when SHOW_COMPONENTS is set to 'true'

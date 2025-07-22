@@ -14,9 +14,11 @@ import {
   Home,
   Menu,
   X,
-  Activity
+  Activity,
+  Crown
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { DashboardSection } from "@/types/dashboard"
 import Link from "next/link"
 
@@ -29,24 +31,26 @@ interface DashboardLayoutProps {
     email?: string
     profileImage?: string
   }
+  isPro?: boolean
 }
 
 const navigationItems = [
-  { id: 'profile' as DashboardSection, label: 'Profile', icon: User },
-  { id: 'analytics' as DashboardSection, label: 'Analytics', icon: Activity },
-  { id: 'about' as DashboardSection, label: 'About/Bio', icon: FileText },
-  { id: 'highlights' as DashboardSection, label: 'Highlights', icon: Star },
-  { id: 'services' as DashboardSection, label: 'Services', icon: Briefcase },
-  { id: 'testimonials' as DashboardSection, label: 'Testimonials', icon: MessageSquare },
-  { id: 'cta' as DashboardSection, label: 'Call to Action', icon: CreditCard },
-  { id: 'social' as DashboardSection, label: 'Social Links', icon: ExternalLink },
+  { id: 'profile' as DashboardSection, label: 'Profile', icon: User, proRequired: false },
+  { id: 'analytics' as DashboardSection, label: 'Analytics', icon: Activity, proRequired: false },
+  { id: 'about' as DashboardSection, label: 'About/Bio', icon: FileText, proRequired: false },
+  { id: 'highlights' as DashboardSection, label: 'Highlights', icon: Star, proRequired: false },
+  { id: 'services' as DashboardSection, label: 'Services', icon: Briefcase, proRequired: false },
+  { id: 'testimonials' as DashboardSection, label: 'Testimonials', icon: MessageSquare, proRequired: false },
+  { id: 'cta' as DashboardSection, label: 'Call to Action', icon: CreditCard, proRequired: false },
+  { id: 'social' as DashboardSection, label: 'Social Links', icon: ExternalLink, proRequired: false },
 ]
 
 export function DashboardLayout({ 
   children, 
   activeSection, 
   onSectionChange, 
-  userInfo 
+  userInfo,
+  isPro = false
 }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
@@ -126,28 +130,56 @@ export function DashboardLayout({
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto p-4">
-          <div className="space-y-1">
-            {navigationItems.map((item) => {
-              const Icon = item.icon
-              const isActive = activeSection === item.id
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleSectionChange(item.id)}
-                  className={`
-                    flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors
-                    ${isActive 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                    }
-                  `}
-                >
-                  <Icon className="h-5 w-5" />
-                  {item.label}
-                </button>
-              )
-            })}
-          </div>
+          <TooltipProvider>
+            <div className="space-y-1">
+              {navigationItems.map((item) => {
+                const Icon = item.icon
+                const isActive = activeSection === item.id
+                const isDisabled = item.proRequired && !isPro
+                
+                const buttonContent = (
+                  <button
+                    key={item.id}
+                    onClick={() => !isDisabled && handleSectionChange(item.id)}
+                    disabled={isDisabled}
+                    className={`
+                      flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors
+                      ${isDisabled 
+                        ? 'text-muted-foreground/50 cursor-not-allowed' 
+                        : isActive 
+                          ? 'bg-primary text-primary-foreground' 
+                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      }
+                    `}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {item.proRequired && !isPro && (
+                      <Crown className="h-4 w-4 text-muted-foreground/50" />
+                    )}
+                  </button>
+                )
+
+                if (isDisabled) {
+                  return (
+                    <Tooltip key={item.id}>
+                      <TooltipTrigger asChild>
+                        {buttonContent}
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <p className="font-medium">Pro Feature</p>
+                        <p className="text-sm text-muted-foreground">
+                          Upgrade to Pro to access AI Marketing Assistant
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )
+                }
+
+                return buttonContent
+              })}
+            </div>
+          </TooltipProvider>
         </nav>
 
         {/* User Info */}
@@ -161,6 +193,9 @@ export function DashboardLayout({
                   width={40}
                   height={40}
                   className="h-10 w-10 rounded-full object-cover"
+                  priority={false}
+                  loading="lazy"
+                  sizes="40px"
                 />
               ) : (
                 <User className="h-5 w-5" />

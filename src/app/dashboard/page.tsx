@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { DashboardService } from '@/lib/supabase/dashboard-service';
 import Dashboard from './Dashboard';
 
 export default async function DashboardPage() {
@@ -10,19 +11,14 @@ export default async function DashboardPage() {
     return null;
   }
 
-  // Query using user.id
-  const { data: landingPage, error } = await supabase
-    .from('landing_pages')
-    .select('onboarding_data')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (!landingPage || error) {
-    // redirect('/onboarding');
+  // Single server-side fetch for all dashboard data
+  const dashboardService = new DashboardService(true);
+  
+  try {
+    const dashboardData = await dashboardService.getDashboardData(user.id);
+    return <Dashboard initialData={dashboardData} />;
+  } catch (error) {
+    console.error('Dashboard data error:', error);
     return null;
   }
-
-  const onboardingData = landingPage?.onboarding_data || null;
-
-  return <Dashboard onboardingData={onboardingData} />;
 } 

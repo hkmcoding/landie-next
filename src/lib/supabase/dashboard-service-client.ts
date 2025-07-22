@@ -23,83 +23,64 @@ export class DashboardServiceClient {
   }
 
   async getDashboardData(userId: string): Promise<DashboardData> {
+    console.log('🚀 DASHBOARD: Executing single optimized RPC query for user:', userId);
+    console.log('🔥 DEBUG TEST - THIS SHOULD ALWAYS SHOW');
+    const startTime = performance.now();
+    
     try {
-      const landingPageId = await this.getLandingPageId(userId);
-      
-      const [landingPageResult, servicesResult, highlightsResult, testimonialsResult, userProStatusResult] = await Promise.all([
-        this.supabase
-          .from('landing_pages')
-          .select('*')
-          .eq('user_id', userId)
-          .single(),
-        this.supabase
-          .from('services')
-          .select('*')
-          .eq('landing_page_id', landingPageId)
-          .order('order_index', { ascending: true }),
-        this.supabase
-          .from('highlights')
-          .select('*')
-          .eq('landing_page_id', landingPageId)
-          .order('order_index', { ascending: true }),
-        this.supabase
-          .from('testimonials')
-          .select('*')
-          .eq('landing_page_id', landingPageId)
-          .order('order_index', { ascending: true }),
-        this.supabase
-          .from('user_pro_status')
-          .select('*')
-          .eq('user_id', userId)
-          .single()
-      ]);
+      // Use optimized single RPC call instead of 6 separate queries
+      const { data, error } = await this.supabase
+        .rpc('get_dashboard_data_optimized', {
+          p_user_id: userId
+        });
 
-      // Check for errors but don't throw for missing user_pro_status
-      if (landingPageResult.error) {
-        console.error('Landing page error:', landingPageResult.error);
-        // Don't throw here - let it continue with null data
-      }
-      if (servicesResult.error) {
-        console.error('Services error:', servicesResult.error);
-        console.error('Services error details:', JSON.stringify(servicesResult.error, null, 2));
-      }
-      if (highlightsResult.error) {
-        console.error('Highlights error:', highlightsResult.error);
-      }
-      if (testimonialsResult.error) {
-        console.error('Testimonials error:', testimonialsResult.error);
-      }
-      if (userProStatusResult.error && userProStatusResult.error.code !== 'PGRST116') {
-        console.error('User pro status error:', userProStatusResult.error);
+      const queryTime = performance.now() - startTime;
+      console.log(`✅ DASHBOARD: Single RPC query completed in ${queryTime.toFixed(2)}ms`);
+
+      if (error) {
+        console.error('Dashboard RPC error:', error);
+        throw error;
       }
 
-      return {
-        landingPage: landingPageResult.data,
-        services: servicesResult.data || [],
-        highlights: highlightsResult.data || [],
-        testimonials: testimonialsResult.data || [],
-        userProStatus: userProStatusResult.data || { user_id: userId, is_pro: false }
+      if (!data) {
+        throw new Error('No data returned from dashboard RPC');
+      }
+
+      // Debug what RPC is returning
+      console.log('🔍 RAW RPC DATA FOR USER:', userId);
+      console.log('🔍 FULL RPC RESPONSE:', JSON.stringify(data, null, 2));
+      console.log('🔍 PRO STATUS FIELD:', {
+        user_pro_status: data.user_pro_status,
+        user_pro_status_type: typeof data.user_pro_status,
+        user_pro_status_stringified: JSON.stringify(data.user_pro_status),
+        is_pro_value: data.user_pro_status?.is_pro,
+        is_pro_type: typeof data.user_pro_status?.is_pro
+      });
+
+      const result = {
+        landingPage: data.landing_page,
+        services: data.services || [],
+        highlights: data.highlights || [],
+        testimonials: data.testimonials || [],
+        userProStatus: data.user_pro_status || { user_id: userId, is_pro: false }
       };
+
+      console.log('📊 DASHBOARD: Data loaded:', {
+        landingPage: !!result.landingPage,
+        services: result.services.length,
+        highlights: result.highlights.length,
+        testimonials: result.testimonials.length,
+        userProStatus: result.userProStatus,
+        isPro: result.userProStatus?.is_pro
+      });
+
+      return result;
     } catch (error) {
-      console.error('Dashboard data error:', error);
+      console.error('❌ DASHBOARD: Query failed:', error);
       throw new Error(`Failed to load dashboard data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
-  private async getLandingPageId(userId: string): Promise<string> {
-    const { data, error } = await this.supabase
-      .from('landing_pages')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-    
-    if (error) {
-      console.error('Error getting landing page ID:', error);
-      return '';
-    }
-    
-    return data?.id || '';
-  }
 
   // Landing Page methods
   async updateLandingPage(userId: string, input: UpdateLandingPageInput): Promise<LandingPage | null> {

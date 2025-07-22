@@ -39,55 +39,36 @@ export class DashboardService {
 
   async getDashboardData(userId: string): Promise<DashboardData> {
     const supabase = await this.getClient();
-    const landingPageId = await this.getLandingPageId(userId);
     
-    const [landingPageResult, servicesResult, highlightsResult, testimonialsResult, userProStatusResult] = await Promise.all([
-      supabase
-        .from('landing_pages')
-        .select('*')
-        .eq('user_id', userId)
-        .single(),
-      supabase
-        .from('services')
-        .select('*')
-        .eq('landing_page_id', landingPageId),
-      supabase
-        .from('highlights')
-        .select('*')
-        .eq('landing_page_id', landingPageId),
-      supabase
-        .from('testimonials')
-        .select('*')
-        .eq('landing_page_id', landingPageId),
-      supabase
-        .from('user_pro_status')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
-    ]);
+    // Use optimized single RPC call instead of 6 separate queries
+    const { data, error } = await supabase
+      .rpc('get_dashboard_data_optimized', {
+        p_user_id: userId
+      });
+
+    if (error) {
+      console.error('Dashboard RPC error:', error);
+      throw error;
+    }
+
+    if (!data) {
+      throw new Error('No data returned from dashboard RPC');
+    }
 
     return {
-      landingPage: landingPageResult.data,
-      services: servicesResult.data || [],
-      highlights: highlightsResult.data || [],
-      testimonials: testimonialsResult.data || [],
-      userProStatus: userProStatusResult.data
+      landingPage: data.landing_page,
+      services: data.services || [],
+      highlights: data.highlights || [],
+      testimonials: data.testimonials || [],
+      userProStatus: data.user_pro_status || { user_id: userId, is_pro: false }
     };
   }
 
-  private async getLandingPageId(userId: string): Promise<string> {
-    const supabase = await this.getClient();
-    const { data } = await supabase
-      .from('landing_pages')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-    return data?.id || '';
-  }
 
   // Landing Page methods
   async updateLandingPage(userId: string, input: UpdateLandingPageInput): Promise<LandingPage | null> {
-    const { data, error } = await this.supabase
+    const supabase = await this.getClient();
+    const { data, error } = await supabase
       .from('landing_pages')
       .update(input)
       .eq('user_id', userId)
@@ -99,7 +80,8 @@ export class DashboardService {
   }
 
   async createLandingPage(userId: string, input: Partial<LandingPage>): Promise<LandingPage | null> {
-    const { data, error } = await this.supabase
+    const supabase = await this.getClient();
+    const { data, error } = await supabase
       .from('landing_pages')
       .insert({ ...input, user_id: userId })
       .select()
@@ -111,7 +93,8 @@ export class DashboardService {
 
   // Service methods
   async createService(landingPageId: string, input: CreateServiceInput): Promise<Service | null> {
-    const { data, error } = await this.supabase
+    const supabase = await this.getClient();
+    const { data, error } = await supabase
       .from('services')
       .insert({ ...input, landing_page_id: landingPageId })
       .select()
@@ -122,7 +105,8 @@ export class DashboardService {
   }
 
   async updateService(id: string, input: UpdateServiceInput): Promise<Service | null> {
-    const { data, error } = await this.supabase
+    const supabase = await this.getClient();
+    const { data, error } = await supabase
       .from('services')
       .update(input)
       .eq('id', id)
@@ -134,7 +118,8 @@ export class DashboardService {
   }
 
   async deleteService(id: string): Promise<void> {
-    const { error } = await this.supabase
+    const supabase = await this.getClient();
+    const { error } = await supabase
       .from('services')
       .delete()
       .eq('id', id);
@@ -143,7 +128,8 @@ export class DashboardService {
   }
 
   async getServices(landingPageId: string): Promise<Service[]> {
-    const { data, error } = await this.supabase
+    const supabase = await this.getClient();
+    const { data, error } = await supabase
       .from('services')
       .select('*')
       .eq('landing_page_id', landingPageId);
@@ -154,7 +140,8 @@ export class DashboardService {
 
   // Highlight methods
   async createHighlight(landingPageId: string, input: CreateHighlightInput): Promise<Highlight | null> {
-    const { data, error } = await this.supabase
+    const supabase = await this.getClient();
+    const { data, error } = await supabase
       .from('highlights')
       .insert({ ...input, landing_page_id: landingPageId })
       .select()
@@ -165,7 +152,8 @@ export class DashboardService {
   }
 
   async updateHighlight(id: string, input: UpdateHighlightInput): Promise<Highlight | null> {
-    const { data, error } = await this.supabase
+    const supabase = await this.getClient();
+    const { data, error } = await supabase
       .from('highlights')
       .update(input)
       .eq('id', id)
@@ -177,7 +165,8 @@ export class DashboardService {
   }
 
   async deleteHighlight(id: string): Promise<void> {
-    const { error } = await this.supabase
+    const supabase = await this.getClient();
+    const { error } = await supabase
       .from('highlights')
       .delete()
       .eq('id', id);
@@ -186,7 +175,8 @@ export class DashboardService {
   }
 
   async getHighlights(landingPageId: string): Promise<Highlight[]> {
-    const { data, error } = await this.supabase
+    const supabase = await this.getClient();
+    const { data, error } = await supabase
       .from('highlights')
       .select('*')
       .eq('landing_page_id', landingPageId);
@@ -197,7 +187,8 @@ export class DashboardService {
 
   // Testimonial methods
   async createTestimonial(landingPageId: string, input: CreateTestimonialInput): Promise<Testimonial | null> {
-    const { data, error } = await this.supabase
+    const supabase = await this.getClient();
+    const { data, error } = await supabase
       .from('testimonials')
       .insert({ ...input, landing_page_id: landingPageId })
       .select()
@@ -208,7 +199,8 @@ export class DashboardService {
   }
 
   async updateTestimonial(id: string, input: UpdateTestimonialInput): Promise<Testimonial | null> {
-    const { data, error } = await this.supabase
+    const supabase = await this.getClient();
+    const { data, error } = await supabase
       .from('testimonials')
       .update(input)
       .eq('id', id)
@@ -220,7 +212,8 @@ export class DashboardService {
   }
 
   async deleteTestimonial(id: string): Promise<void> {
-    const { error } = await this.supabase
+    const supabase = await this.getClient();
+    const { error } = await supabase
       .from('testimonials')
       .delete()
       .eq('id', id);
@@ -229,7 +222,8 @@ export class DashboardService {
   }
 
   async getTestimonials(landingPageId: string): Promise<Testimonial[]> {
-    const { data, error } = await this.supabase
+    const supabase = await this.getClient();
+    const { data, error } = await supabase
       .from('testimonials')
       .select('*')
       .eq('landing_page_id', landingPageId);
@@ -240,7 +234,8 @@ export class DashboardService {
 
   // File upload methods
   async uploadImage(bucket: string, path: string, file: File): Promise<string> {
-    const { data, error } = await this.supabase.storage
+    const supabase = await this.getClient();
+    const { data, error } = await supabase.storage
       .from(bucket)
       .upload(path, file, {
         cacheControl: '3600',
@@ -249,7 +244,7 @@ export class DashboardService {
 
     if (error) throw error;
 
-    const { data: { publicUrl } } = this.supabase.storage
+    const { data: { publicUrl } } = supabase.storage
       .from(bucket)
       .getPublicUrl(data.path);
 
@@ -257,7 +252,8 @@ export class DashboardService {
   }
 
   async deleteImage(bucket: string, path: string): Promise<void> {
-    const { error } = await this.supabase.storage
+    const supabase = await this.getClient();
+    const { error } = await supabase.storage
       .from(bucket)
       .remove([path]);
 
@@ -266,7 +262,8 @@ export class DashboardService {
 
   // Pro status methods
   async getUserProStatus(userId: string): Promise<UserProStatus | null> {
-    const { data, error } = await this.supabase
+    const supabase = await this.getClient();
+    const { data, error } = await supabase
       .from('user_pro_status')
       .select('*')
       .eq('user_id', userId)
@@ -277,7 +274,8 @@ export class DashboardService {
   }
 
   async updateUserProStatus(userId: string, isPro: boolean): Promise<UserProStatus | null> {
-    const { data, error } = await this.supabase
+    const supabase = await this.getClient();
+    const { data, error } = await supabase
       .from('user_pro_status')
       .upsert({ user_id: userId, is_pro: isPro })
       .select()

@@ -22,6 +22,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://tvggbhlivlvzciacdhmy.supabase.co" />
+        <link rel="dns-prefetch" href="https://tvggbhlivlvzciacdhmy.supabase.co" />
+        <link rel="preconnect" href="https://api.openai.com" />
+        <link rel="dns-prefetch" href="https://api.openai.com" />
+      </head>
       <body className="antialiased">
         <AuthProvider>
           <ConditionalLayout>

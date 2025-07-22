@@ -1,4 +1,3 @@
-import OpenAI from 'openai';
 import { 
   AIAnalysisRequest, 
   AIAnalysisResponse, 
@@ -6,17 +5,16 @@ import {
   UserAnalyticsSummary,
   AIAnalysisSession 
 } from '@/types/ai-assistant';
-// Remove the import since we'll pass the client from the API route
 
 class AIService {
-  private openai: OpenAI;
-
-  constructor() {
+  private async getOpenAIClient() {
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('OPENAI_API_KEY is not configured');
     }
     
-    this.openai = new OpenAI({
+    // Dynamic import to avoid bundling OpenAI on client-side
+    const { default: OpenAI } = await import('openai');
+    return new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
   }
@@ -187,7 +185,8 @@ class AIService {
       throw new Error('Input too large. Please reduce content length.');
     }
 
-    const completion = await this.openai.chat.completions.create({
+    const openai = await this.getOpenAIClient();
+    const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini', // Much cheaper than gpt-4, still very capable
       messages: [
         { role: 'system', content: systemPrompt },
@@ -324,7 +323,8 @@ Choose based on:
 3. Avoiding overlap between suggestions`;
 
     try {
-      const completion = await this.openai.chat.completions.create({
+      const openai = await this.getOpenAIClient();
+    const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: selectionPrompt }],
         temperature: 0.3,

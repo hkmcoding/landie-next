@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from 'next/image'
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -39,13 +39,26 @@ export function ProfileSection({ landingPage, onUpdate }: ProfileSectionProps) {
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: landingPage?.name || "",
-      username: landingPage?.username || "",
-      headline: landingPage?.headline || "",
-      subheadline: landingPage?.subheadline || "",
-      contact_email: landingPage?.contact_email || "",
+      name: "",
+      username: "",
+      headline: "",
+      subheadline: "",
+      contact_email: "",
     },
   })
+
+  // Update form when landingPage data changes
+  useEffect(() => {
+    if (landingPage) {
+      form.reset({
+        name: landingPage.name || "",
+        username: landingPage.username || "",
+        headline: landingPage.headline || "",
+        subheadline: landingPage.subheadline || "",
+        contact_email: landingPage.contact_email || "",
+      })
+    }
+  }, [landingPage, form])
 
 
   const onSubmit = async (data: ProfileFormData) => {

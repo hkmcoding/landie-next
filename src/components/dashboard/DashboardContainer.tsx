@@ -1,78 +1,30 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { DashboardLayout } from "./DashboardLayout"
 import { ProfileSection } from "./sections/ProfileSection"
+import { AboutSection } from "./sections/AboutSection"
+import { SocialLinksSection } from "./sections/SocialLinksSection"
+import { CallToActionSection } from "./sections/CallToActionSection"
 import { ServicesSection } from "./sections/ServicesSection"
 import { HighlightsSection } from "./sections/HighlightsSection"
 import { TestimonialsSection } from "./sections/TestimonialsSection"
-import { SocialLinksSection } from "./sections/SocialLinksSection"
-import { CallToActionSection } from "./sections/CallToActionSection"
-import { AboutSection } from "./sections/AboutSection"
 import { AnalyticsSection } from "./sections/AnalyticsSection"
 import { DashboardSection, DashboardData } from "@/types/dashboard"
-import { DashboardServiceClient } from "@/lib/supabase/dashboard-service-client"
-import { createClient } from "@/lib/supabase/client"
+import { useDashboardData } from "@/contexts/DashboardDataContext"
+
 
 export function DashboardContainer() {
   const [activeSection, setActiveSection] = useState<DashboardSection>('profile')
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: dashboardData } = useDashboardData()
   
-  const supabase = createClient()
-  const dashboardService = new DashboardServiceClient()
-
-  useEffect(() => {
-    async function loadDashboardData() {
-      try {
-        setIsLoading(true)
-        const { data: { user } } = await supabase.auth.getUser()
-        
-        if (!user) {
-          setError('No user found')
-          return
-        }
-
-        const data = await dashboardService.getDashboardData(user.id)
-        setDashboardData(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    loadDashboardData()
-  }, [])
-
   const handleDataUpdate = (newData: Partial<DashboardData>) => {
-    setDashboardData(prev => prev ? { ...prev, ...newData } : null)
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-description">Loading dashboard...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <p className="text-error">{error}</p>
-        </div>
-      </div>
-    )
+    // For now, we'll handle updates via the individual sections
+    // In the future, this could update the context or trigger a refresh
+    console.log('Dashboard data update:', newData)
   }
 
   const renderActiveSection = () => {
-    if (!dashboardData) return null
 
     switch (activeSection) {
       case 'profile':
