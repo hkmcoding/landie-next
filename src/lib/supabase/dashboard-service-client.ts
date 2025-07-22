@@ -57,6 +57,11 @@ export class DashboardServiceClient {
         is_pro_type: typeof data.user_pro_status?.is_pro
       });
 
+      // Debug bio field specifically
+      console.log('🔍 BIO DEBUG - landing_page from RPC:', data.landing_page)
+      console.log('🔍 BIO DEBUG - bio field value:', data.landing_page?.bio)
+      console.log('🔍 BIO DEBUG - landing_page keys:', data.landing_page ? Object.keys(data.landing_page) : 'null')
+
       const result = {
         landingPage: data.landing_page,
         services: data.services || [],

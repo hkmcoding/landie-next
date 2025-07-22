@@ -1,3 +1,5 @@
+@tailwind components;
+
 @layer components {
   /* Major headings */
   .heading-1     { @apply text-5xl font-extrabold leading-tight tracking-tight; }
@@ -21,12 +23,7 @@
   .caption-sm    { @apply text-xs leading-tight tracking-wide; }
 
   /* Form labels, badges */
-  .label         { @apply text-sm font-semibold tracking-wider; }
-} 
-
-/* Label (matches Label component) */
-.label {
-  @apply flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50;
+  .label         { @apply text-sm font-semibold tracking-wider flex items-center gap-2 leading-none select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50; }
 }
 
 /* Tooltip popover (matches TextInput tooltip) */
@@ -41,7 +38,7 @@
 .text-description {
   @apply text-sm text-muted-foreground;
 }
-.text-error, .text-destructive {
+.text-error {
   @apply text-sm text-destructive;
 }
 .text-success {

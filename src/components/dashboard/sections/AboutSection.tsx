@@ -30,16 +30,17 @@ export function AboutSection({ landingPage, onUpdate }: AboutSectionProps) {
   const supabase = createClient()
   const dashboardService = new DashboardServiceClient()
 
+  // Debug logs to track bio field issue
+  console.log('AboutSection - landingPage received:', landingPage)
+  console.log('AboutSection - landingPage.bio:', landingPage?.bio)
+  console.log('AboutSection - landingPage keys:', landingPage ? Object.keys(landingPage) : 'landingPage is null')
+
   const form = useForm<AboutFormData>({
     resolver: zodResolver(aboutSchema),
     defaultValues: {
       bio: landingPage?.bio || "",
     },
   })
-
-  console.log('hi')
-
-  console.log('landingPage', landingPage)
 
   const onSubmit = async (data: AboutFormData) => {
     try {

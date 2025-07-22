@@ -24,7 +24,7 @@ export function StickyCTA({ landingPage }: StickyCTAProps) {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-white/95 backdrop-blur-lg border-t border-slate-200/50 shadow-2xl">
-      <div className="container mx-auto max-w-md md:max-w-2xl">
+      <div className="mx-auto max-w-md md:max-w-2xl">
         <a
           href={ctaUrl}
           target="_blank"

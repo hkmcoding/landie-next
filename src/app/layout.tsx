@@ -1,4 +1,5 @@
 import "../globals.css";
+import "../typography.css";
 import { AuthProvider } from "@/lib/supabase/auth-provider";
 import { ConditionalLayout } from "@/components/ConditionalLayout";
 

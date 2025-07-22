@@ -100,6 +100,7 @@ export function DashboardContainer() {
         email: dashboardData?.landingPage?.contact_email || undefined,
         profileImage: dashboardData?.landingPage?.profile_image_url || undefined
       }}
+      username={dashboardData?.landingPage?.username ?? undefined}
     >
       {renderActiveSection()}
     </DashboardLayout>

@@ -16,7 +16,7 @@ export function ServicesSection({ services }: ServicesSectionProps) {
 
   return (
     <section className="py-6 md:py-12 px-4">
-      <div className="container mx-auto max-w-md md:max-w-2xl">
+      <div className="mx-auto max-w-md md:max-w-2xl">
         <div className="text-center mb-4 md:mb-6">
           <h2 className="heading-5 mb-2 text-slate-800">
             Services

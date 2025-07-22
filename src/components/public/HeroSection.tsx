@@ -42,7 +42,7 @@ export function HeroSection({ landingPage, profileOnly = false }: HeroSectionPro
 
   return (
     <section className="px-4 pb-6">
-      <div className="container mx-auto max-w-md">
+      <div className="mx-auto max-w-md">
         <div className="text-center space-y-4">
 
           {/* Name */}

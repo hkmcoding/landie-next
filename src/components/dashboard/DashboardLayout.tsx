@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from 'next/image'
 import { 
   User, 
@@ -15,7 +15,8 @@ import {
   Menu,
   X,
   Activity,
-  Crown
+  Crown,
+  Eye
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -31,6 +32,7 @@ interface DashboardLayoutProps {
     email?: string
     profileImage?: string
   }
+  username?: string
   isPro?: boolean
 }
 
@@ -50,9 +52,15 @@ export function DashboardLayout({
   activeSection, 
   onSectionChange, 
   userInfo,
+  username,
   isPro = false
 }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   const handleSectionChange = (section: DashboardSection) => {
     onSectionChange(section)
@@ -181,6 +189,34 @@ export function DashboardLayout({
             </div>
           </TooltipProvider>
         </nav>
+
+        {/* View Landing Page */}
+        <div className="p-4">
+          {isClient && username && username.trim() !== '' ? (
+            <Link href={`/${username}`} target="_blank" rel="noopener noreferrer">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-2"
+                size="sm"
+              >
+                <Eye className="h-4 w-4" />
+                View My Landing Page
+                <ExternalLink className="h-3 w-3 ml-auto" />
+              </Button>
+            </Link>
+          ) : (
+            <Button 
+              variant="outline" 
+              className="w-full justify-start gap-2 opacity-50 cursor-not-allowed"
+              size="sm"
+              disabled
+            >
+              <Eye className="h-4 w-4" />
+              {isClient ? 'Set Username First' : 'Loading...'}
+              <ExternalLink className="h-3 w-3 ml-auto" />
+            </Button>
+          )}
+        </div>
 
         {/* User Info */}
         <div className="border-t p-4">
