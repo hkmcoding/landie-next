@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useState } from "react"
-import Image from 'next/image'
 import { 
   User, 
   Briefcase, 
@@ -15,11 +14,101 @@ import {
   Menu,
   X,
   Activity,
-  Crown
+  Crown,
+  LogOut,
+  HelpCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { DashboardSection } from "@/types/dashboard"
+import Image from 'next/image';
+import { ImageFallback } from '@/components/ui/ImageFallback';
+
+// Settings Menu Component
+function SettingsMenu() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    setIsOpen(false);
+  };
+
+  const goToPublicProfile = () => {
+    // Navigate to profile section
+    window.location.href = '/dashboard?section=profile';
+    setIsOpen(false);
+  };
+
+  const openSupport = () => {
+    // Open help documentation or support
+    window.open('https://docs.example.com', '_blank');
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="p-2"
+        onClick={() => setIsOpen(!isOpen)}
+        title="Settings"
+      >
+        <Settings className="h-4 w-4" />
+      </Button>
+
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setIsOpen(false)}
+          />
+          
+          {/* Menu */}
+          <div className="absolute top-full right-0 mt-2 w-56 bg-background rounded-lg border shadow-lg z-50 overflow-hidden">
+            
+            {/* Profile Settings */}
+            <button
+              onClick={goToPublicProfile}
+              className="w-full px-4 py-4 text-left flex items-center gap-3 hover:bg-muted transition-colors"
+            >
+              <User className="w-5 h-5 text-muted-foreground" />
+              <span className="text-sm font-medium">Profile Settings</span>
+            </button>
+
+            {/* Support */}
+            <button
+              onClick={openSupport}
+              className="w-full px-4 py-4 text-left flex items-center gap-3 hover:bg-muted transition-colors"
+            >
+              <HelpCircle className="w-5 h-5 text-muted-foreground" />
+              <span className="text-sm font-medium">Help & Support</span>
+            </button>
+
+            <hr className="border-border my-2" />
+
+            {/* Log Out */}
+            <button
+              onClick={handleLogout}
+              className="w-full px-4 py-4 text-left flex items-center gap-3 hover:bg-red-50 transition-colors text-red-600"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="text-sm font-medium">Log Out</span>
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -179,22 +268,19 @@ export function DashboardLayout({
         {/* User Info */}
         <div className="border-t p-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-              {userInfo?.profileImage ? (
-                <Image 
-                  src={userInfo.profileImage} 
-                  alt="Profile" 
-                  width={40}
-                  height={40}
-                  className="h-10 w-10 rounded-full object-cover"
-                  priority={false}
-                  loading="lazy"
-                  sizes="40px"
-                />
-              ) : (
-                <User className="h-5 w-5" />
-              )}
-            </div>
+            {userInfo?.profileImage ? (
+              <Image
+                src={userInfo.profileImage}
+                alt={userInfo?.name || 'Profile'}
+                width={40}
+                height={40}
+                loading="lazy"
+                className="rounded-full object-cover"
+                sizes="40px"
+              />
+            ) : (
+              <ImageFallback size={40} rounded="full" />
+            )}
             <div className="flex-1 min-w-0">
               <p className="label font-medium truncate">
                 {userInfo?.name || 'User'}
@@ -203,9 +289,7 @@ export function DashboardLayout({
                 {userInfo?.email || 'user@example.com'}
               </p>
             </div>
-            <Button variant="ghost" size="sm" className="p-2">
-              <Settings className="h-4 w-4" />
-            </Button>
+            <SettingsMenu />
           </div>
         </div>
       </div>

@@ -13,6 +13,7 @@ import { FileUpload } from "@/components/ui/file-upload"
 import { LandingPage, DashboardData, UpdateLandingPageInput } from "@/types/dashboard"
 import { DashboardServiceClient } from "@/lib/supabase/dashboard-service-client"
 import { createClient } from "@/lib/supabase/client"
+import { ImageFallback } from '@/components/ui/ImageFallback';
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -118,13 +119,18 @@ export function ProfileSection({ landingPage, onUpdate }: ProfileSectionProps) {
           <div className="space-y-4">
             {profileImage && (
               <div className="flex items-center gap-4">
-                <Image
-                  src={profileImage}
-                  alt="Current profile"
-                  width={80}
-                  height={80}
-                  className="w-20 h-20 rounded-full object-cover border"
-                />
+                {profileImage ? (
+                  <Image
+                    src={profileImage}
+                    alt="Current profile"
+                    width={80}
+                    height={80}
+                    loading="lazy"
+                    className="rounded-full border"
+                  />
+                ) : (
+                  <ImageFallback size={80} rounded="full" className="border" />
+                )}
                 <div>
                   <p className="label font-medium">Current Profile Photo</p>
                   <button

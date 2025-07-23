@@ -32,6 +32,8 @@ import {
   useSortable,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import Image from 'next/image';
+import { ImageFallback } from '@/components/ui/ImageFallback';
 
 const serviceSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
@@ -131,12 +133,19 @@ function SortableServiceCard({ service, onEdit, onDelete }: SortableServiceCardP
         {service.image_urls.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {service.image_urls.map((imageUrl, index) => (
-              <img
-                key={index}
-                src={imageUrl}
-                alt={`${service.title} image ${index + 1}`}
-                className="w-16 h-16 object-cover rounded"
-              />
+              imageUrl ? (
+                <Image
+                  key={index}
+                  src={imageUrl}
+                  alt={`${service.title} image ${index + 1}`}
+                  width={64}
+                  height={64}
+                  loading="lazy"
+                  className="rounded-md"
+                />
+              ) : (
+                <ImageFallback key={index} size={64} rounded="md" />
+              )
             ))}
           </div>
         )}

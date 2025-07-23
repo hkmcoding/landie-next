@@ -4,6 +4,8 @@ import React from 'react';
 import { Service } from '@/types/dashboard';
 import { Icons } from '@/components/icons';
 import Image from 'next/image';
+import { ImageFallback } from '@/components/ui/ImageFallback';
+import clsx from 'clsx';
 
 interface ServicesSectionProps {
   services: Service[];
@@ -130,15 +132,20 @@ function MediaSlideshow({ mediaItems }: { mediaItems: Array<{ type: 'image' | 'v
   return (
     <div className="relative w-full h-full group/media">
       {currentItem.type === 'image' ? (
-        <Image
-          src={currentItem.url}
-          alt="Service"
-          fill
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, 50vw"
-          placeholder="blur"
-          blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
-        />
+        currentItem.url ? (
+          <Image
+            src={currentItem.url}
+            alt="Service"
+            fill
+            className={clsx("object-cover")}
+            sizes="(max-width: 768px) 100vw, 50vw"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full bg-muted flex items-center justify-center">
+            <ImageFallback size={80} rounded="md" />
+          </div>
+        )
       ) : (
         <div className="relative w-full h-full bg-black/20 flex items-center justify-center">
           <div className="absolute inset-0">
@@ -146,10 +153,9 @@ function MediaSlideshow({ mediaItems }: { mediaItems: Array<{ type: 'image' | 'v
               src={`https://img.youtube.com/vi/${getYouTubeVideoId(currentItem.url)}/maxresdefault.jpg`}
               alt="Video thumbnail"
               fill
-              className="object-cover"
+              className={clsx("object-cover")}
               sizes="(max-width: 768px) 100vw, 50vw"
-              placeholder="blur"
-              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+              loading="lazy"
             />
           </div>
           <div className="relative z-10 bg-black/60 rounded-full p-4">

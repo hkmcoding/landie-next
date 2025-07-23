@@ -2,6 +2,7 @@
 
 import { LandingPage } from '@/types/dashboard';
 import Image from 'next/image';
+import { ImageFallback } from '@/components/ui/ImageFallback';
 
 interface HeroSectionProps {
   landingPage: LandingPage;
@@ -16,27 +17,19 @@ export function HeroSection({ landingPage, profileOnly = false }: HeroSectionPro
 
   // If profileOnly mode, just return the profile image
   if (profileOnly) {
+    if (!profileImage) {
+      return <ImageFallback size={120} rounded="full" />;
+    }
     return (
-      <>
-        {profileImage ? (
-          <Image
-            src={profileImage}
-            alt={name || 'Profile'}
-            width={120}
-            height={120}
-            className="object-cover w-full h-full"
-            priority
-            placeholder="blur"
-            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
-          />
-        ) : (
-          <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-            <div className="text-3xl font-semibold text-gray-400">
-              {name?.charAt(0)?.toUpperCase() || '?'}
-            </div>
-          </div>
-        )}
-      </>
+      <Image
+        src={profileImage}
+        alt={name || 'Profile'}
+        width={120}
+        height={120}
+        priority
+        className="rounded-full object-cover"
+        sizes="120px"
+      />
     );
   }
 
