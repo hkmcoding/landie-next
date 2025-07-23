@@ -1,3 +1,12 @@
+export interface AiSuggestion {
+  id: string;
+  user_id: string;
+  type: 'bio' | 'services' | 'highlights';
+  suggestion: string | Array<{ title: string; description: string }>;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface LandingPage {
   id: string;
   user_id: string;

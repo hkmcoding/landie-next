@@ -315,13 +315,13 @@ export function ServicesSection({ services, landingPageId, onUpdate }: ServicesS
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   label="Service Title"
-                  placeholder="Personal Training"
+                  placeholder="1-on-1 Personal Training"
                   {...form.register("title")}
                   error={form.formState.errors.title?.message}
                 />
                 <FormField
                   label="Price (optional)"
-                  placeholder="$99/session"
+                  placeholder="$85/session"
                   {...form.register("price")}
                 />
               </div>
@@ -331,7 +331,7 @@ export function ServicesSection({ services, landingPageId, onUpdate }: ServicesS
                 <Textarea
                   id="description"
                   {...form.register("description")}
-                  placeholder="Describe your service in detail..."
+                  placeholder="Personalized fitness program designed to help you reach your specific goals through targeted exercises, nutrition guidance, and ongoing support..."
                   rows={3}
                 />
                 {form.formState.errors.description && (
@@ -344,13 +344,13 @@ export function ServicesSection({ services, landingPageId, onUpdate }: ServicesS
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   label="Button Text"
-                  placeholder="Book Now"
+                  placeholder="Start Training"
                   {...form.register("button_text")}
                   error={form.formState.errors.button_text?.message}
                 />
                 <FormField
                   label="Button URL"
-                  placeholder="https://calendly.com/your-link"
+                  placeholder="https://calendly.com/sarahfitness/consultation"
                   {...form.register("button_url")}
                   error={form.formState.errors.button_url?.message}
                 />

@@ -7,12 +7,14 @@ import { TextInput } from '@/components/ui/text-input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { OnboardingService, OnboardingData } from '@/lib/supabase/onboarding-service';
+import { callAi, AiType } from '@/lib/ai/onboarding-ai';
 
 interface OnboardingWizardProps {
   userId: string;
   onComplete: (data: OnboardingData) => void;
+  devMode?: boolean;
 }
 
 const STEPS = [
@@ -25,13 +27,24 @@ const STEPS = [
 
 const STORAGE_KEY = 'landie-onboarding-data';
 
-export default function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) {
+export default function OnboardingWizard({ userId, onComplete, devMode = false }: OnboardingWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [aiLoading, setAiLoading] = useState<Record<AiType, boolean>>({
+    bio: false,
+    services: false,
+    highlights: false,
+  });
+  const [aiUsed, setAiUsed] = useState<Record<AiType, boolean>>({
+    bio: false,
+    services: false,
+    highlights: false,
+  });
   const [data, setData] = useState<OnboardingData>({
     name: '',
     username: '',
+    additionalInfo: '',
     headline: '',
     subheadline: '',
     bio: '',
@@ -86,6 +99,12 @@ export default function OnboardingWizard({ userId, onComplete }: OnboardingWizar
           return;
         }
 
+        // Skip database loading in dev mode
+        if (devMode) {
+          console.log('DEV MODE: Skipping database load, using default data');
+          return;
+        }
+
         // If no local data, try to load from database
         const existingData = await onboardingService.getUserOnboardingData(userId);
         if (existingData) {
@@ -99,7 +118,7 @@ export default function OnboardingWizard({ userId, onComplete }: OnboardingWizar
     };
 
     loadExistingData();
-  }, [userId]);
+  }, [userId, devMode]);
 
   const updateData = (updates: Partial<OnboardingData>) => {
     const newData = { ...data, ...updates };
@@ -108,6 +127,34 @@ export default function OnboardingWizard({ userId, onComplete }: OnboardingWizar
     setErrors({});
     // Save to localStorage
     saveToLocalStorage(newData);
+  };
+
+  const handleAiGeneration = async (type: AiType) => {
+    try {
+      setAiLoading(prev => ({ ...prev, [type]: true }));
+      const response = await callAi(type, userId, data);
+      
+      if (type === 'bio' && typeof response.suggestion === 'string') {
+        updateData({ bio: response.suggestion });
+      } else if (type === 'services' && Array.isArray(response.suggestion)) {
+        updateData({ 
+          services: response.suggestion,
+          servicesCount: response.suggestion.length 
+        });
+      } else if (type === 'highlights' && Array.isArray(response.suggestion)) {
+        updateData({ 
+          highlights: response.suggestion,
+          highlightsCount: response.suggestion.length 
+        });
+      }
+      
+      setAiUsed(prev => ({ ...prev, [type]: true }));
+    } catch (error) {
+      console.error(`Failed to generate ${type}:`, error);
+      // Show toast error (would need to implement toast system)
+    } finally {
+      setAiLoading(prev => ({ ...prev, [type]: false }));
+    }
   };
 
   const handleNext = async () => {
@@ -128,6 +175,12 @@ export default function OnboardingWizard({ userId, onComplete }: OnboardingWizar
   };
 
   const saveProgress = async () => {
+    if (devMode) {
+      // In dev mode, skip database writes
+      console.log('DEV MODE: Skipping progress save to database');
+      return;
+    }
+    
     try {
       setIsLoading(true);
       await onboardingService.saveOnboardingProgress(userId, data);
@@ -140,6 +193,14 @@ export default function OnboardingWizard({ userId, onComplete }: OnboardingWizar
   };
 
   const handleSubmit = async () => {
+    if (devMode) {
+      // In dev mode, skip database writes but complete the flow
+      console.log('DEV MODE: Skipping onboarding completion to database');
+      console.log('DEV MODE: Onboarding data:', data);
+      onComplete(data);
+      return;
+    }
+    
     try {
       setIsLoading(true);
       await onboardingService.completeOnboarding(userId, data);
@@ -165,7 +226,14 @@ export default function OnboardingWizard({ userId, onComplete }: OnboardingWizar
       {/* Progress Bar */}
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <h1 className="heading-3">Welcome to Landie</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="heading-3">Welcome to Landie</h1>
+            {devMode && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                DEV MODE
+              </span>
+            )}
+          </div>
           <span className="caption">Step {currentStep} of {STEPS.length}</span>
         </div>
         <Progress value={progress} className="h-2" />
@@ -222,9 +290,33 @@ export default function OnboardingWizard({ userId, onComplete }: OnboardingWizar
           )}
           
           {currentStep === 1 && <Step1 data={data} updateData={updateData} />}
-          {currentStep === 2 && <Step2 data={data} updateData={updateData} />}
-          {currentStep === 3 && <Step3 data={data} updateData={updateData} />}
-          {currentStep === 4 && <Step4 data={data} updateData={updateData} />}
+          {currentStep === 2 && (
+            <Step2 
+              data={data} 
+              updateData={updateData} 
+              onAiGenerate={handleAiGeneration}
+              aiLoading={aiLoading}
+              aiUsed={aiUsed}
+            />
+          )}
+          {currentStep === 3 && (
+            <Step3 
+              data={data} 
+              updateData={updateData} 
+              onAiGenerate={handleAiGeneration}
+              aiLoading={aiLoading}
+              aiUsed={aiUsed}
+            />
+          )}
+          {currentStep === 4 && (
+            <Step4 
+              data={data} 
+              updateData={updateData} 
+              onAiGenerate={handleAiGeneration}
+              aiLoading={aiLoading}
+              aiUsed={aiUsed}
+            />
+          )}
           {currentStep === 5 && <Step5 data={data} updateData={updateData} />}
         </CardContent>
       </Card>
@@ -259,6 +351,34 @@ export default function OnboardingWizard({ userId, onComplete }: OnboardingWizar
   );
 }
 
+// AI Generation Button Component
+function AiButton({ 
+  type, 
+  onGenerate, 
+  loading, 
+  used 
+}: { 
+  type: AiType; 
+  onGenerate: (type: AiType) => void; 
+  loading: boolean; 
+  used: boolean; 
+}) {
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => onGenerate(type)}
+      disabled={loading}
+      aria-busy={loading}
+      aria-disabled={used}
+      className="flex items-center gap-2"
+    >
+      <Sparkles className="w-4 h-4" />
+      {loading ? 'Generating...' : used ? 'AI suggestion added' : 'Generate with AI'}
+    </Button>
+  );
+}
+
 // Step 1 - User Info
 function Step1({ data, updateData }: { data: OnboardingData; updateData: (updates: Partial<OnboardingData>) => void }) {
   return (
@@ -271,7 +391,7 @@ function Step1({ data, updateData }: { data: OnboardingData; updateData: (update
         label="Display Name"
         value={data.name}
         onChange={(e) => updateData({ name: e.target.value })}
-        placeholder="e.g., John Doe"
+        placeholder="e.g., Sarah Johnson"
         tooltip="This is the name shown on your landing page"
         required
       />
@@ -280,17 +400,44 @@ function Step1({ data, updateData }: { data: OnboardingData; updateData: (update
         label="Username"
         value={data.username}
         onChange={(e) => updateData({ username: e.target.value })}
-        placeholder="e.g., johndoe"
+        placeholder="e.g., sarahfitness"
         tooltip="This is your landing page URL"
-        description="Your landing page will be available at landie.com/johndoe"
+        description="Your landing page will be available at landie.com/sarahfitness"
         required
       />
+      
+      <div className="space-y-2">
+        <Label htmlFor="additionalInfo">Tell us about yourself</Label>
+        <Textarea
+          id="additionalInfo"
+          rows={5}
+          placeholder="Tell us about your fitness journey, certifications, training philosophy, or target clients… (optional)"
+          maxLength={1000}
+          value={data.additionalInfo || ''}
+          onChange={(e) => updateData({ additionalInfo: e.target.value })}
+        />
+        <p className="text-sm text-muted-foreground">
+          Optional — sharing your certifications, specialties, training philosophy, or ideal clients helps our AI create better fitness-focused suggestions.
+        </p>
+      </div>
     </div>
   );
 }
 
 // Step 2 - About/Bio
-function Step2({ data, updateData }: { data: OnboardingData; updateData: (updates: Partial<OnboardingData>) => void }) {
+function Step2({ 
+  data, 
+  updateData, 
+  onAiGenerate, 
+  aiLoading, 
+  aiUsed 
+}: { 
+  data: OnboardingData; 
+  updateData: (updates: Partial<OnboardingData>) => void;
+  onAiGenerate: (type: AiType) => void;
+  aiLoading: Record<AiType, boolean>;
+  aiUsed: Record<AiType, boolean>;
+}) {
   return (
     <div className="space-y-4">
       <p className="paragraph text-muted-foreground">
@@ -301,7 +448,7 @@ function Step2({ data, updateData }: { data: OnboardingData; updateData: (update
         label="Headline (Optional)"
         value={data.headline}
         onChange={(e) => updateData({ headline: e.target.value })}
-        placeholder="e.g., Senior Software Engineer"
+        placeholder="e.g., Certified Personal Trainer"
         description="A brief title that describes what you do"
       />
       
@@ -309,7 +456,7 @@ function Step2({ data, updateData }: { data: OnboardingData; updateData: (update
         label="Subheadline (Optional)"
         value={data.subheadline}
         onChange={(e) => updateData({ subheadline: e.target.value })}
-        placeholder="e.g., Building amazing user experiences"
+        placeholder="e.g., Transforming lives through fitness"
         description="A supporting tagline that appears below your headline"
       />
       
@@ -318,18 +465,38 @@ function Step2({ data, updateData }: { data: OnboardingData; updateData: (update
         <Textarea
           value={data.bio}
           onChange={(e) => updateData({ bio: e.target.value })}
-          placeholder="Tell us about yourself, your background, and what you're passionate about..."
+          placeholder="Share your fitness journey, training philosophy, certifications, and what drives your passion for helping others achieve their goals..."
           rows={4}
           required
         />
-        <p className="text-description">This is your main introduction to visitors</p>
+        <div className="flex justify-between items-center">
+          <p className="text-description">This is your main introduction to visitors</p>
+          <AiButton
+            type="bio"
+            onGenerate={onAiGenerate}
+            loading={aiLoading.bio}
+            used={aiUsed.bio}
+          />
+        </div>
       </div>
     </div>
   );
 }
 
 // Step 3 - Services
-function Step3({ data, updateData }: { data: OnboardingData; updateData: (updates: Partial<OnboardingData>) => void }) {
+function Step3({ 
+  data, 
+  updateData, 
+  onAiGenerate, 
+  aiLoading, 
+  aiUsed 
+}: { 
+  data: OnboardingData; 
+  updateData: (updates: Partial<OnboardingData>) => void;
+  onAiGenerate: (type: AiType) => void;
+  aiLoading: Record<AiType, boolean>;
+  aiUsed: Record<AiType, boolean>;
+}) {
   const updateServicesCount = (count: number) => {
     const newServices = Array.from({ length: count }, (_, i) => 
       data.services[i] || { title: '', description: '' }
@@ -373,7 +540,7 @@ function Step3({ data, updateData }: { data: OnboardingData; updateData: (update
             label="Title"
             value={service.title}
             onChange={(e) => updateService(index, 'title', e.target.value)}
-            placeholder="e.g., Web Development"
+            placeholder="e.g., Personal Training"
             required
           />
           
@@ -382,19 +549,40 @@ function Step3({ data, updateData }: { data: OnboardingData; updateData: (update
             <Textarea
               value={service.description}
               onChange={(e) => updateService(index, 'description', e.target.value)}
-              placeholder="Describe what this service includes..."
+              placeholder="Describe what this training program includes, target audience, and expected outcomes..."
               rows={3}
               required
             />
           </div>
         </div>
       ))}
+      
+      <div className="flex justify-end pt-4">
+        <AiButton
+          type="services"
+          onGenerate={onAiGenerate}
+          loading={aiLoading.services}
+          used={aiUsed.services}
+        />
+      </div>
     </div>
   );
 }
 
 // Step 4 - Highlights
-function Step4({ data, updateData }: { data: OnboardingData; updateData: (updates: Partial<OnboardingData>) => void }) {
+function Step4({ 
+  data, 
+  updateData, 
+  onAiGenerate, 
+  aiLoading, 
+  aiUsed 
+}: { 
+  data: OnboardingData; 
+  updateData: (updates: Partial<OnboardingData>) => void;
+  onAiGenerate: (type: AiType) => void;
+  aiLoading: Record<AiType, boolean>;
+  aiUsed: Record<AiType, boolean>;
+}) {
   const updateHighlightsCount = (count: number) => {
     const newHighlights = Array.from({ length: count }, (_, i) => 
       data.highlights[i] || { title: '', description: '' }
@@ -438,7 +626,7 @@ function Step4({ data, updateData }: { data: OnboardingData; updateData: (update
             label="Title"
             value={highlight.title}
             onChange={(e) => updateHighlight(index, 'title', e.target.value)}
-            placeholder="e.g., 5+ Years Experience"
+            placeholder="e.g., NASM Certified Trainer"
             required
           />
           
@@ -447,13 +635,22 @@ function Step4({ data, updateData }: { data: OnboardingData; updateData: (update
             <Textarea
               value={highlight.description}
               onChange={(e) => updateHighlight(index, 'description', e.target.value)}
-              placeholder="Describe this achievement or credential..."
+              placeholder="Describe this certification, achievement, or area of expertise..."
               rows={3}
               required
             />
           </div>
         </div>
       ))}
+      
+      <div className="flex justify-end pt-4">
+        <AiButton
+          type="highlights"
+          onGenerate={onAiGenerate}
+          loading={aiLoading.highlights}
+          used={aiUsed.highlights}
+        />
+      </div>
     </div>
   );
 }
@@ -533,7 +730,7 @@ function Step5({ data, updateData }: { data: OnboardingData; updateData: (update
               label="Button Text"
               value={data.ctaText}
               onChange={(e) => updateData({ ctaText: e.target.value })}
-              placeholder="e.g., Get Started, Contact Me, Learn More"
+              placeholder="e.g., Start Your Journey, Book Consultation, Train With Me"
               description="The text displayed on your main action button"
               required
             />

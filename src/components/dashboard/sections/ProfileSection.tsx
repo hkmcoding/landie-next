@@ -206,13 +206,13 @@ export function ProfileSection({ landingPage, onUpdate }: ProfileSectionProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 label="Full Name"
-                placeholder="John Doe"
+                placeholder="Sarah Johnson"
                 {...form.register("name")}
                 error={form.formState.errors.name?.message}
               />
               <FormField
                 label="Username"
-                placeholder="johndoe"
+                placeholder="sarahfitness"
                 {...form.register("username")}
                 error={form.formState.errors.username?.message}
               />
@@ -220,14 +220,14 @@ export function ProfileSection({ landingPage, onUpdate }: ProfileSectionProps) {
 
             <FormField
               label="Headline"
-              placeholder="Professional Fitness Trainer & Wellness Coach"
+              placeholder="Certified Personal Trainer & Nutrition Coach"
               {...form.register("headline")}
               error={form.formState.errors.headline?.message}
             />
 
             <FormField
               label="Subheadline"
-              placeholder="Helping busy professionals achieve their fitness goals"
+              placeholder="Transforming lives through personalized fitness and nutrition"
               {...form.register("subheadline")}
               error={form.formState.errors.subheadline?.message}
             />
@@ -235,7 +235,7 @@ export function ProfileSection({ landingPage, onUpdate }: ProfileSectionProps) {
             <FormField
               label="Contact Email"
               type="email"
-              placeholder="john@example.com"
+              placeholder="sarah@sarahfitness.com"
               {...form.register("contact_email")}
               error={form.formState.errors.contact_email?.message}
             />

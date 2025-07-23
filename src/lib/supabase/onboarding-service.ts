@@ -5,6 +5,7 @@ export interface OnboardingData {
   // Step 1 - User Info
   name: string;
   username: string;
+  additionalInfo?: string;
   
   // Step 2 - About/Bio
   headline: string;

@@ -306,7 +306,7 @@ export function TestimonialsSection({ testimonials, landingPageId, onUpdate }: T
                 <Textarea
                   id="quote"
                   {...form.register("quote")}
-                  placeholder="This service changed my life..."
+                  placeholder="Sarah's training program completely transformed my fitness and confidence. I've never felt stronger!"
                   rows={3}
                   className="min-h-[80px]"
                 />
@@ -320,13 +320,13 @@ export function TestimonialsSection({ testimonials, landingPageId, onUpdate }: T
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   label="Author Name"
-                  placeholder="John Doe"
+                  placeholder="Mike Rodriguez"
                   {...form.register("author_name")}
                   error={form.formState.errors.author_name?.message}
                 />
                 <FormField
                   label="Description/Title"
-                  placeholder="CEO, Company Name"
+                  placeholder="Software Engineer, Tech Startup"
                   {...form.register("description")}
                   error={form.formState.errors.description?.message}
                 />

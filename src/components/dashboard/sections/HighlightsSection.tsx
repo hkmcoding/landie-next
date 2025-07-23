@@ -250,7 +250,7 @@ export function HighlightsSection({ highlights, landingPageId, onUpdate }: Highl
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 lg:space-y-6">
               <FormField
                 label="Header"
-                placeholder="Key Achievement"
+                placeholder="NASM Certified Trainer"
                 {...form.register("header")}
                 error={form.formState.errors.header?.message}
               />
@@ -260,7 +260,7 @@ export function HighlightsSection({ highlights, landingPageId, onUpdate }: Highl
                 <Textarea
                   id="content"
                   {...form.register("content")}
-                  placeholder="Describe this highlight..."
+                  placeholder="National Academy of Sports Medicine certified with 5+ years experience helping clients achieve sustainable fitness transformations..."
                   rows={3}
                   className="min-h-[80px]"
                 />

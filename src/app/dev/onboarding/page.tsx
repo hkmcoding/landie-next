@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react';
-import { OnboardingWizard } from '@/components/onboarding';
+import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
 import { OnboardingData } from '@/lib/supabase/onboarding-service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,7 @@ export default function OnboardingDevPage() {
   const [showWizard, setShowWizard] = useState(false);
   const [completedData, setCompletedData] = useState<OnboardingData | null>(null);
 
-  const mockUserId = "dev-user-123";
+  const mockUserId = "DEV_user-123";
 
   const handleComplete = (data: OnboardingData) => {
     setCompletedData(data);
@@ -29,6 +29,7 @@ export default function OnboardingDevPage() {
         <OnboardingWizard
           userId={mockUserId}
           onComplete={handleComplete}
+          devMode={true}
         />
       </div>
     );
@@ -44,6 +45,7 @@ export default function OnboardingDevPage() {
           <CardContent className="space-y-4">
             <p className="paragraph text-muted-foreground">
               This is a development demo of the onboarding wizard. Use this to test the wizard functionality during development.
+              <strong> No data will be written to the database</strong> - this is a safe demo environment.
             </p>
             
             <div className="flex gap-4">
@@ -63,7 +65,7 @@ export default function OnboardingDevPage() {
                 <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                   <h3 className="subtitle-3 text-green-800 mb-2">✅ Onboarding Completed Successfully!</h3>
                   <p className="text-sm text-green-700">
-                    User data has been saved to the database. Check the console for the complete data object.
+                    Demo completed! No data was written to the database. Check the console for the complete data object.
                   </p>
                 </div>
                 
