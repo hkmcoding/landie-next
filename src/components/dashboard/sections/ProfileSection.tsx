@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Save, Loader2 } from "lucide-react"
+import { Save, Loader2, Eye, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FormField } from "@/components/ui/form-field"
@@ -32,6 +32,7 @@ interface ProfileSectionProps {
 export function ProfileSection({ landingPage, onUpdate }: ProfileSectionProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [profileImage, setProfileImage] = useState<string | null>(landingPage?.profile_image_url || null)
+  const [hasMounted, setHasMounted] = useState(false)
   
   const supabase = createClient()
   const dashboardService = new DashboardServiceClient()
@@ -60,6 +61,10 @@ export function ProfileSection({ landingPage, onUpdate }: ProfileSectionProps) {
     }
   }, [landingPage, form])
 
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
 
   const onSubmit = async (data: ProfileFormData) => {
     try {
@@ -70,7 +75,7 @@ export function ProfileSection({ landingPage, onUpdate }: ProfileSectionProps) {
 
       const updateData: UpdateLandingPageInput = {
         ...data,
-        profile_image_url: profileImage
+        profile_image_url: profileImage ?? undefined,
       }
 
       const updatedLandingPage = await dashboardService.updateLandingPage(user.id, updateData)
@@ -91,10 +96,15 @@ export function ProfileSection({ landingPage, onUpdate }: ProfileSectionProps) {
     <div className="space-y-4 lg:space-y-6">
       {/* Sticky Header */}
       <div className="sticky top-0 lg:top-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10 pb-4 border-b lg:border-b-0">
-        <h1 className="heading-5 lg:heading-4 font-bold">Profile Setup</h1>
-        <p className="text-description lg:paragraph">
-          Configure your profile information and upload your photo
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="heading-5 lg:heading-4 font-bold">Profile Setup</h1>
+            <p className="text-description lg:paragraph">
+              Configure your profile information and upload your photo
+            </p>
+          </div>
+          {/* View Landing Page Link removed */}
+        </div>
       </div>
 
       <Card>
@@ -124,7 +134,7 @@ export function ProfileSection({ landingPage, onUpdate }: ProfileSectionProps) {
                         if (!user) throw new Error('No user found');
 
                         const updatedLandingPage = await dashboardService.updateLandingPage(user.id, {
-                          profile_image_url: null
+                          profile_image_url: undefined
                         });
                         
                         if (updatedLandingPage) {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState } from "react"
 import Image from 'next/image'
 import { 
   User, 
@@ -15,13 +15,11 @@ import {
   Menu,
   X,
   Activity,
-  Crown,
-  Eye
+  Crown
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { DashboardSection } from "@/types/dashboard"
-import Link from "next/link"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -31,8 +29,8 @@ interface DashboardLayoutProps {
     name?: string
     email?: string
     profileImage?: string
+    username?: string
   }
-  username?: string
   isPro?: boolean
 }
 
@@ -52,21 +50,18 @@ export function DashboardLayout({
   activeSection, 
   onSectionChange, 
   userInfo,
-  username,
   isPro = false
 }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [isClient, setIsClient] = useState(false)
+  
 
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
 
   const handleSectionChange = (section: DashboardSection) => {
     onSectionChange(section)
     // Close sidebar on mobile after selection
     setIsSidebarOpen(false)
   }
+
 
   return (
     <div className="flex h-screen bg-background">
@@ -140,23 +135,31 @@ export function DashboardLayout({
         <nav className="flex-1 overflow-y-auto p-4">
           <TooltipProvider>
             <div className="space-y-1">
+              {/* View Landing Page nav item */}
+              {userInfo?.username && (
+                <a
+                  href={`/${userInfo.username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors text-primary hover:bg-accent hover:text-accent-foreground`}
+                >
+                  <ExternalLink className="h-5 w-5" />
+                  <span className="flex-1 text-left">View Landing Page</span>
+                </a>
+              )}
+              {/* Main navigation items */}
               {navigationItems.map((item) => {
                 const Icon = item.icon
                 const isActive = activeSection === item.id
-                const isDisabled = item.proRequired && !isPro
-                
-                const buttonContent = (
+                return (
                   <button
                     key={item.id}
-                    onClick={() => !isDisabled && handleSectionChange(item.id)}
-                    disabled={isDisabled}
+                    onClick={() => handleSectionChange(item.id)}
                     className={`
                       flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors
-                      ${isDisabled 
-                        ? 'text-muted-foreground/50 cursor-not-allowed' 
-                        : isActive 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      ${isActive 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                       }
                     `}
                   >
@@ -167,56 +170,11 @@ export function DashboardLayout({
                     )}
                   </button>
                 )
-
-                if (isDisabled) {
-                  return (
-                    <Tooltip key={item.id}>
-                      <TooltipTrigger asChild>
-                        {buttonContent}
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
-                        <p className="font-medium">Pro Feature</p>
-                        <p className="text-sm text-muted-foreground">
-                          Upgrade to Pro to access AI Marketing Assistant
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )
-                }
-
-                return buttonContent
               })}
             </div>
           </TooltipProvider>
         </nav>
 
-        {/* View Landing Page */}
-        <div className="p-4">
-          {isClient && username && username.trim() !== '' ? (
-            <Link href={`/${username}`} target="_blank" rel="noopener noreferrer">
-              <Button 
-                variant="outline" 
-                className="w-full justify-start gap-2"
-                size="sm"
-              >
-                <Eye className="h-4 w-4" />
-                View My Landing Page
-                <ExternalLink className="h-3 w-3 ml-auto" />
-              </Button>
-            </Link>
-          ) : (
-            <Button 
-              variant="outline" 
-              className="w-full justify-start gap-2 opacity-50 cursor-not-allowed"
-              size="sm"
-              disabled
-            >
-              <Eye className="h-4 w-4" />
-              {isClient ? 'Set Username First' : 'Loading...'}
-              <ExternalLink className="h-3 w-3 ml-auto" />
-            </Button>
-          )}
-        </div>
 
         {/* User Info */}
         <div className="border-t p-4">
