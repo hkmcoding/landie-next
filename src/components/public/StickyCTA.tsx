@@ -2,7 +2,7 @@
 
 import { LandingPage } from '@/types/dashboard';
 import { Icons } from '@/components/icons';
-import { AnalyticsTracker } from '@/lib/analytics-tracker';
+import { AnalyticsTrackerSingleton } from '@/lib/analytics-singleton';
 
 interface StickyCTAProps {
   landingPage: LandingPage;
@@ -18,8 +18,8 @@ export function StickyCTA({ landingPage }: StickyCTAProps) {
 
   const handleCtaClick = () => {
     console.log('🔗 CTA clicked:', { ctaText, ctaUrl })
-    const tracker = new AnalyticsTracker(landingPage.id)
-    tracker.trackCtaClick(ctaText, 'sticky_bottom')
+    // Use singleton to prevent creating new tracker instance
+    AnalyticsTrackerSingleton.trackCtaClick(landingPage.id, ctaText, 'sticky_bottom')
   }
 
   return (

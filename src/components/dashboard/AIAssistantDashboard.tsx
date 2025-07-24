@@ -16,6 +16,7 @@ import {
   APIResponse 
 } from '@/types/ai-assistant';
 import { Sparkles, TrendingUp, Brain, RefreshCw, CheckCircle } from 'lucide-react';
+import { SectionAnalysis } from '@/components/dashboard/sections/AnalyticsSection';
 
 interface AIAssistantDashboardProps {
   landingPageId: string;
@@ -31,11 +32,18 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'priority' | 'confidence'>('priority');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sectionDropoff, setSectionDropoff] = useState<any[]>([]);
 
   // Load initial data
   useEffect(() => {
+    console.log('useEffect triggered with landingPageId:', landingPageId);
     loadDashboardData();
+    loadSectionDropoff();
   }, [landingPageId]);
+
+  useEffect(() => {
+    console.log('Section dropoff:', sectionDropoff);
+  }, [sectionDropoff]);
 
   const loadDashboardData = async () => {
     try {
@@ -120,6 +128,24 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
     }
   };
 
+  const loadSectionDropoff = async () => {
+    try {
+      console.log('Loading section dropoff for landing page:', landingPageId);
+      const response = await fetch(`/api/ai-assistant/section-dropoff?landing_page_id=${landingPageId}`);
+      console.log('Section dropoff response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Section dropoff API response:', data);
+        setSectionDropoff(data?.data || []);
+      } else {
+        console.error('Section dropoff response not ok:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('Section dropoff error:', error);
+    }
+  };
+
   const runAIAnalysis = async (analysisType: 'full' | 'incremental' = 'full') => {
     try {
       setIsAnalyzing(true);
@@ -172,7 +198,7 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
     }
   };
 
-  const handleSuggestionAction = async (suggestionId: string, action: 'implement' | 'dismiss' | 'test', data?: any) => {
+  const handleSuggestionAction = async (suggestionId: string, action: 'implement' | 'dismiss' | 'test' | 'auto_apply', data?: any) => {
     try {
       const response = await fetch(`/api/ai-assistant/suggestions/${suggestionId}`, {
         method: 'PATCH',
@@ -191,6 +217,13 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
         throw new Error(result.error || 'Action failed');
       }
 
+      // For auto_apply, also update the landing page data
+      if (action === 'auto_apply' && data?.target_section && data?.suggested_content) {
+        // The API should handle updating the landing page, so we just need to mark as implemented
+        // We could add a visual confirmation here or refresh the page data
+        console.log(`Auto-applied suggestion for ${data.target_section}: ${data.suggested_content}`);
+      }
+
       // Update local state instead of full reload for better performance
       setSuggestions(prevSuggestions => 
         prevSuggestions.map(suggestionCard => 
@@ -199,8 +232,8 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
                 ...suggestionCard,
                 suggestion: {
                   ...suggestionCard.suggestion,
-                  status: action === 'implement' ? 'implemented' : action === 'dismiss' ? 'dismissed' : suggestionCard.suggestion.status,
-                  implemented_at: action === 'implement' ? new Date().toISOString() : suggestionCard.suggestion.implemented_at,
+                  status: (action === 'implement' || action === 'auto_apply') ? 'implemented' : action === 'dismiss' ? 'dismissed' : suggestionCard.suggestion.status,
+                  implemented_at: (action === 'implement' || action === 'auto_apply') ? new Date().toISOString() : suggestionCard.suggestion.implemented_at,
                   dismissed_at: action === 'dismiss' ? new Date().toISOString() : suggestionCard.suggestion.dismissed_at
                 }
               }
@@ -247,156 +280,164 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
   return (
     <AIErrorBoundary>
       <div className="space-y-6">
-      {/* Welcome Header */}
-      <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Brain className="w-6 h-6 text-blue-600" />
-              <h1 className="heading-2 text-blue-900">Hi, {userName}</h1>
-            </div>
-            <p className="paragraph text-blue-700">
-              Your AI Marketing Assistant is ready to help optimize your landing page performance.
-            </p>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Button
-              onClick={() => runAIAnalysis('full')}
-              disabled={isAnalyzing || !canRunAnalysis}
-              className="bg-blue-600 hover:bg-blue-700"
-              title={!canRunAnalysis ? "Complete or dismiss pending suggestions first" : ""}
-            >
-              {isAnalyzing ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  {!canRunAnalysis ? "Complete suggestions first" : "Run AI Analysis"}
-                </>
-              )}
-            </Button>
-            {lastAnalysisTime && (
-              <p className="caption text-blue-600">
-                Last analysis: {new Date(lastAnalysisTime).toLocaleString()}
+        {/* Welcome Header */}
+        <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Brain className="w-6 h-6 text-blue-600" />
+                <h1 className="heading-2 text-blue-900">Hi, {userName}</h1>
+              </div>
+              <p className="paragraph text-blue-700">
+                Your AI Marketing Assistant is ready to help optimize your landing page performance.
               </p>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      {/* Error Display */}
-      {error && (
-        <Card className="p-4 border-red-200 bg-red-50">
-          <p className="paragraph text-red-700">{error}</p>
-        </Card>
-      )}
-
-      {/* AI Suggestions */}
-      <div className="space-y-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-green-600" />
-            <h2 className="heading-3">AI Recommendations</h2>
-          </div>
-          {pendingSuggestions.length > 0 && (
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Select value={sortBy} onValueChange={(value: 'priority' | 'confidence') => setSortBy(value)}>
-                <SelectTrigger className="w-full sm:w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="priority">Priority</SelectItem>
-                  <SelectItem value="confidence">Confidence</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-                className="w-full sm:w-auto"
-              >
-                {sortBy === 'priority' 
-                  ? (sortOrder === 'desc' ? 'High → Low' : 'Low → High')
-                  : (sortOrder === 'desc' ? 'High → Low' : 'Low → High')
-                }
-              </Button>
             </div>
-          )}
-        </div>
-
-        {suggestions.length === 0 ? (
-          <Card className="p-8 text-center">
-            <Sparkles className="w-12 h-12 mx-auto mb-4 text-blue-500 opacity-50" />
-            <h3 className="heading-4 mb-2">No suggestions yet</h3>
-            <p className="paragraph text-gray-600 mb-4">
-              Run an AI analysis to get personalized recommendations for your landing page.
-            </p>
-            <Button
-              onClick={() => runAIAnalysis('full')}
-              disabled={isAnalyzing}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Get AI Suggestions
-            </Button>
-          </Card>
-        ) : (
-          <div className="grid gap-4">
-            {/* Pending Suggestions */}
-            {pendingSuggestions.length > 0 ? (
-              pendingSuggestions.map((suggestionCard) => (
-                <SuggestionCard
-                  key={suggestionCard.suggestion.id}
-                  suggestionCard={suggestionCard}
-                  onAction={handleSuggestionAction}
-                />
-              ))
-            ) : (
-              <Card className="p-8 text-center">
-                <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500 opacity-50" />
-                <h3 className="heading-4 mb-2">All suggestions completed!</h3>
-                <p className="paragraph text-gray-600 mb-4">
-                  Great work! You've addressed all pending recommendations. Run a new analysis to get fresh insights.
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={() => runAIAnalysis('full')}
+                disabled={isAnalyzing || !canRunAnalysis}
+                className="bg-blue-600 hover:bg-blue-700"
+                title={!canRunAnalysis ? "Complete or dismiss pending suggestions first" : ""}
+              >
+                {isAnalyzing ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    {!canRunAnalysis ? "Complete suggestions first" : "Run AI Analysis"}
+                  </>
+                )}
+              </Button>
+              {lastAnalysisTime && (
+                <p className="caption text-blue-600">
+                  Last analysis: {new Date(lastAnalysisTime).toLocaleString()}
                 </p>
-              </Card>
-            )}
+              )}
+            </div>
+          </div>
+        </Card>
 
-            {/* Implemented Suggestions */}
-            {implementedSuggestions.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="heading-4 text-gray-700 mt-6">Recently Implemented</h3>
-                {implementedSuggestions.slice(0, 3).map((suggestionCard) => (
+        {/* Analytics Overview */}
+        {analyticsSummary && (
+          <AnalyticsOverview 
+            analytics={analyticsSummary} 
+            landingPageId={landingPageId}
+          />
+        )}
+
+        {/* Section Dropoff Analysis */}
+        {sectionDropoff && sectionDropoff.length > 0 && (
+          <Card className="p-4">
+            <h3 className="heading-4 mb-4">Section Dropoff Analysis</h3>
+            <SectionAnalysis data={sectionDropoff} />
+          </Card>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <Card className="p-4 border-red-200 bg-red-50">
+            <p className="paragraph text-red-700">{error}</p>
+          </Card>
+        )}
+
+        {/* AI Suggestions */}
+        <div className="space-y-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-green-600" />
+              <h2 className="heading-3">AI Recommendations</h2>
+            </div>
+            {pendingSuggestions.length > 0 && (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Select value={sortBy} onValueChange={(value: 'priority' | 'confidence') => setSortBy(value)}>
+                  <SelectTrigger className="w-full sm:w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="priority">Priority</SelectItem>
+                    <SelectItem value="confidence">Confidence</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                  className="w-full sm:w-auto"
+                >
+                  {sortBy === 'priority' 
+                    ? (sortOrder === 'desc' ? 'High → Low' : 'Low → High')
+                    : (sortOrder === 'desc' ? 'High → Low' : 'Low → High')
+                  }
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {suggestions.length === 0 ? (
+            <Card className="p-8 text-center">
+              <Sparkles className="w-12 h-12 mx-auto mb-4 text-blue-500 opacity-50" />
+              <h3 className="heading-4 mb-2">No suggestions yet</h3>
+              <p className="paragraph text-gray-600 mb-4">
+                Run an AI analysis to get personalized recommendations for your landing page.
+              </p>
+              <Button
+                onClick={() => runAIAnalysis('full')}
+                disabled={isAnalyzing}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Get AI Suggestions
+              </Button>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {/* Pending Suggestions */}
+              {pendingSuggestions.length > 0 ? (
+                pendingSuggestions.map((suggestionCard) => (
                   <SuggestionCard
                     key={suggestionCard.suggestion.id}
                     suggestionCard={suggestionCard}
                     onAction={handleSuggestionAction}
-                    showPerformance
                   />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+                ))
+              ) : (
+                <Card className="p-8 text-center">
+                  <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500 opacity-50" />
+                  <h3 className="heading-4 mb-2">All suggestions completed!</h3>
+                  <p className="paragraph text-gray-600 mb-4">
+                    Great work! You've addressed all pending recommendations. Run a new analysis to get fresh insights.
+                  </p>
+                </Card>
+              )}
 
-      {/* Analytics Overview */}
-      {analyticsSummary && (
-        <AnalyticsOverview 
-          analytics={analyticsSummary} 
+              {/* Implemented Suggestions */}
+              {implementedSuggestions.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="heading-4 text-gray-700 mt-6">Recently Implemented</h3>
+                  {implementedSuggestions.slice(0, 3).map((suggestionCard) => (
+                    <SuggestionCard
+                      key={suggestionCard.suggestion.id}
+                      suggestionCard={suggestionCard}
+                      onAction={handleSuggestionAction}
+                      showPerformance
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Performance Metrics */}
+        <PerformanceMetrics 
+          totalSuggestions={totalSuggestions}
+          implementedSuggestions={implementedSuggestions.length}
+          pendingSuggestions={pendingSuggestions.length}
           landingPageId={landingPageId}
         />
-      )}
-
-      {/* Performance Metrics */}
-      <PerformanceMetrics 
-        totalSuggestions={totalSuggestions}
-        implementedSuggestions={implementedSuggestions.length}
-        pendingSuggestions={pendingSuggestions.length}
-        landingPageId={landingPageId}
-      />
       </div>
     </AIErrorBoundary>
   );

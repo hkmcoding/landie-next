@@ -1,0 +1,1 @@
+SELECT * FROM analytics.section_dropoff_mv LIMIT 10; 

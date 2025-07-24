@@ -4,8 +4,8 @@ import { DashboardData } from '@/types/dashboard';
 import { HeroSection } from './HeroSection';
 import dynamic from 'next/dynamic';
 import { ProfileMenu } from './ProfileMenu';
-import { AnalyticsTracker } from '@/lib/analytics-tracker';
-import { useEffect } from 'react';
+import { AnalyticsTrackerSingleton } from '@/lib/analytics-singleton';
+import { useEffect, useRef } from 'react';
 
 // Lazy load sections that are not immediately visible
 const ServicesSection = dynamic(() => import('./ServicesSection').then(mod => ({ default: mod.ServicesSection })), {
@@ -36,16 +36,40 @@ interface PublicLandingPageProps {
 
 export function PublicLandingPage({ data }: PublicLandingPageProps) {
   const { landingPage, services, highlights } = data;
+  
+  // Refs for section tracking
+  const heroRef = useRef<HTMLDivElement>(null);
+  const aboutRef = useRef<HTMLDivElement>(null);
+  const highlightsRef = useRef<HTMLDivElement>(null);
+  const servicesRef = useRef<HTMLDivElement>(null);
+  const socialRef = useRef<HTMLDivElement>(null);
+  const contactRef = useRef<HTMLDivElement>(null);
 
   // Initialize analytics tracking when component mounts
   useEffect(() => {
     if (landingPage?.id) {
       console.log('🚀 Initializing analytics for landing page:', landingPage.id)
-      const tracker = new AnalyticsTracker(landingPage.id)
-      const cleanup = tracker.initializeTracking()
       
-      // Cleanup when component unmounts
-      return cleanup
+      // Use singleton to prevent multiple tracker instances
+      const cleanup = AnalyticsTrackerSingleton.initializeTracking(landingPage.id)
+      
+      // Initialize section tracking
+      const sections = [
+        { name: 'hero', element: heroRef.current, index: 0 },
+        { name: 'about', element: aboutRef.current, index: 1 },
+        { name: 'highlights', element: highlightsRef.current, index: 2 },
+        { name: 'services', element: servicesRef.current, index: 3 },
+        { name: 'social', element: socialRef.current, index: 4 },
+        { name: 'contact', element: contactRef.current, index: 5 }
+      ].filter(section => section.element !== null) as { name: string; element: HTMLElement; index: number }[]
+      
+      const sectionCleanup = AnalyticsTrackerSingleton.initializeSectionTracking(landingPage.id, sections)
+      
+      // Combined cleanup function
+      return () => {
+        cleanup()
+        sectionCleanup()
+      }
     }
   }, [landingPage?.id])
 
@@ -76,23 +100,35 @@ export function PublicLandingPage({ data }: PublicLandingPageProps) {
 
       {/* Main content area with white background, starting from profile picture middle */}
       <div className="max-w-md mx-auto bg-white shadow-sm relative z-10" style={{ marginTop: '-60px', paddingTop: '80px' }}>
-        <HeroSection landingPage={landingPage} profileOnly={false} />
+        <div ref={heroRef}>
+          <HeroSection landingPage={landingPage} profileOnly={false} />
+        </div>
         
         {landingPage.bio && (
-          <AboutSection bio={landingPage.bio} />
+          <div ref={aboutRef}>
+            <AboutSection bio={landingPage.bio} />
+          </div>
         )}
         
         {highlights && highlights.length > 0 && (
-          <HighlightsSection highlights={highlights} />
+          <div ref={highlightsRef}>
+            <HighlightsSection highlights={highlights} />
+          </div>
         )}
         
         {services && services.length > 0 && (
-          <ServicesSection services={services} />
+          <div ref={servicesRef}>
+            <ServicesSection services={services} />
+          </div>
         )}
         
-        <SocialLinksSection landingPage={landingPage} />
+        <div ref={socialRef}>
+          <SocialLinksSection landingPage={landingPage} />
+        </div>
         
-        <ContactSection landingPage={landingPage} />
+        <div ref={contactRef}>
+          <ContactSection landingPage={landingPage} />
+        </div>
         
         <FooterSection />
         

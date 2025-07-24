@@ -1,32 +1,25 @@
--- Fix Analytics Function to Match Existing Schema
--- This corrects the get_user_analytics_summary function to use actual column names
+-- Fix the page views analytics function to correctly handle column naming
 
--- Fix the get_user_analytics_summary function to match existing analytics tables
-CREATE OR REPLACE FUNCTION get_user_analytics_summary(p_user_id UUID, p_landing_page_id UUID)
-RETURNS JSONB AS $$
+-- Drop and recreate the function with corrected column references
+CREATE OR REPLACE FUNCTION "public"."get_user_analytics_summary"("p_user_id" "uuid", "p_landing_page_id" "uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
 DECLARE
     result JSONB;
 BEGIN
     WITH analytics_data AS (
         SELECT 
-            -- Page views and visitors (using correct column names)
             COALESCE(COUNT(pv.id), 0) as total_page_views,
             COALESCE(COUNT(DISTINCT pv.viewer_id), 0) as unique_visitors,
-            
-            -- CTA performance (cta_clicks doesn't have visitor_id, so we count by landing_page_id)
-            COALESCE((SELECT COUNT(*) FROM analytics.cta_clicks WHERE landing_page_id = p_landing_page_id::text), 0) as total_cta_clicks,
-            
-            -- Session data (using duration_seconds from page_sessions)
+            COALESCE((SELECT COUNT(*) FROM analytics.cta_clicks WHERE landing_page_id = p_landing_page_id), 0) as total_cta_clicks,
             COALESCE(AVG(COALESCE(ps.duration_seconds, 0)), 0) as avg_session_duration,
-            
-            -- Recent performance (last 7 days)
             COALESCE(COUNT(CASE WHEN pv.created_at >= NOW() - INTERVAL '7 days' THEN 1 END), 0) as recent_page_views,
-            COALESCE((SELECT COUNT(*) FROM analytics.cta_clicks WHERE landing_page_id = p_landing_page_id::text AND created_at >= NOW() - INTERVAL '7 days'), 0) as recent_cta_clicks
-            
+            COALESCE((SELECT COUNT(*) FROM analytics.cta_clicks WHERE landing_page_id = p_landing_page_id AND created_at >= NOW() - INTERVAL '7 days'), 0) as recent_cta_clicks
         FROM analytics.page_views pv
         LEFT JOIN analytics.page_sessions ps ON ps.landing_page_id = pv.landing_page_id 
-            AND ps.visitor_id = pv.viewer_id
-        WHERE pv.landing_page_id = p_landing_page_id::text
+            AND ps.visitor_id = pv.viewer_id  -- Fixed: match viewer_id from page_views to visitor_id in page_sessions
+            AND ps.session_id = pv.session_id -- Additional join condition for better accuracy
+        WHERE pv.landing_page_id = p_landing_page_id
     ),
     content_data AS (
         SELECT 
@@ -44,7 +37,6 @@ BEGIN
         SELECT 
             0 as content_changes_last_7_days,
             NULL::timestamptz as last_content_change
-        -- Note: content_changes table structure is not clear from migrations, so defaulting to 0
     )
     
     SELECT jsonb_build_object(
@@ -78,7 +70,6 @@ BEGIN
     ) INTO result
     FROM analytics_data ad, content_data cd, recent_changes rc;
     
-    -- If no result, return default values
     IF result IS NULL THEN
         result := jsonb_build_object(
             'analytics', jsonb_build_object(
@@ -106,50 +97,6 @@ BEGIN
             'generated_at', NOW()
         );
     END IF;
-    
     RETURN result;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Create the materialized view in the public schema (not analytics)
-DROP MATERIALIZED VIEW IF EXISTS suggestion_performance_mv;
-DROP MATERIALIZED VIEW IF EXISTS analytics.suggestion_performance_mv;
-
-CREATE MATERIALIZED VIEW suggestion_performance_mv AS
-SELECT 
-    s.id as suggestion_id,
-    s.user_id,
-    s.landing_page_id,
-    s.suggestion_type,
-    s.priority,
-    s.status,
-    s.created_at,
-    s.implemented_at,
-    
-    -- Implementation metrics
-    CASE WHEN si.id IS NOT NULL THEN TRUE ELSE FALSE END as was_implemented,
-    COALESCE(si.partial_implementation, false) as partial_implementation,
-    
-    -- Time to implementation
-    CASE 
-        WHEN s.implemented_at IS NOT NULL 
-        THEN EXTRACT(EPOCH FROM (s.implemented_at - s.created_at))/86400 
-        ELSE NULL 
-    END as days_to_implement,
-    
-    -- Feedback metrics
-    sf.rating as user_rating,
-    sf.is_helpful,
-    
-    -- Analytics impact (if measured)
-    si.before_analytics->>'page_views' as before_page_views,
-    si.after_analytics->>'page_views' as after_page_views,
-    si.before_analytics->>'cta_clicks' as before_cta_clicks,
-    si.after_analytics->>'cta_clicks' as after_cta_clicks
-    
-FROM public.ai_suggestions s
-LEFT JOIN public.suggestion_implementations si ON s.id = si.suggestion_id
-LEFT JOIN public.suggestion_feedback sf ON s.id = sf.suggestion_id;
-
--- Grant permissions
-GRANT SELECT ON suggestion_performance_mv TO authenticated;
+$$;

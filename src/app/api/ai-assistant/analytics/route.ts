@@ -18,13 +18,21 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
-    const landingPageId = searchParams.get('landing_page_id');
+    let landingPageId = searchParams.get('landing_page_id');
     const type = searchParams.get('type') || 'summary';
     const days = parseInt(searchParams.get('days') || '30');
 
     if (!landingPageId) {
       return NextResponse.json(
         { success: false, error: 'landing_page_id is required' } as APIResponse,
+        { status: 400 }
+      );
+    }
+
+    // Ensure landingPageId is a valid UUID string
+    if (!/^[0-9a-fA-F-]{36}$/.test(landingPageId)) {
+      return NextResponse.json(
+        { success: false, error: 'landing_page_id must be a valid UUID' } as APIResponse,
         { status: 400 }
       );
     }
@@ -52,8 +60,9 @@ export async function GET(request: NextRequest) {
       .single();
 
     // Check if this is a dev route request
+    const url = new URL(request.url);
     const referer = request.headers.get('referer');
-    const isDevRoute = referer?.includes('/dev/');
+    const isDevRoute = referer?.includes('/dev/') || url.pathname.startsWith('/dev/');
     
     // Only allow access for pro users or dev routes
     if (!proStatus?.is_pro && !isDevRoute) {

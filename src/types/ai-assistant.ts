@@ -174,10 +174,12 @@ export interface AIAnalysisResponse {
 
 export interface SuggestionActionRequest {
   suggestion_id: string;
-  action: 'implement' | 'dismiss' | 'test';
+  action: 'implement' | 'dismiss' | 'test' | 'auto_apply';
   implementation_content?: string;
   implementation_notes?: string;
   partial_implementation?: boolean;
+  target_section?: string;
+  suggested_content?: string;
 }
 
 export interface SuggestionActionResponse {

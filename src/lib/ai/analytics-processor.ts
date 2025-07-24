@@ -240,6 +240,7 @@ export class AnalyticsProcessor {
 
     // Get page views data
     const { data: pageViewsData, error: pageViewsError } = await this.supabase
+      .schema('analytics')
       .from('page_views')
       .select('created_at')
       .eq('landing_page_id', landingPageId)
@@ -252,6 +253,7 @@ export class AnalyticsProcessor {
 
     // Get CTA clicks data
     const { data: ctaClicksData, error: ctaClicksError } = await this.supabase
+      .schema('analytics')
       .from('cta_clicks')
       .select('created_at')
       .eq('landing_page_id', landingPageId)

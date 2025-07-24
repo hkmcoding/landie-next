@@ -31,9 +31,9 @@ export async function PATCH(
     const body: SuggestionActionRequest = await request.json();
     const { action, implementation_content, implementation_notes, partial_implementation } = body;
 
-    if (!action || !['implement', 'dismiss', 'test'].includes(action)) {
+    if (!action || !['implement', 'dismiss', 'test', 'auto_apply'].includes(action)) {
       return NextResponse.json(
-        { success: false, error: 'Valid action is required (implement, dismiss, test)' } as APIResponse,
+        { success: false, error: 'Valid action is required (implement, dismiss, test, auto_apply)' } as APIResponse,
         { status: 400 }
       );
     }
@@ -41,7 +41,7 @@ export async function PATCH(
     // Verify user owns the suggestion
     const { data: suggestion, error: suggestionError } = await supabase
       .from('ai_suggestions')
-      .select('id, user_id, status')
+      .select('id, user_id, status, landing_page_id, target_section, suggested_content')
       .eq('id', suggestionId)
       .eq('user_id', user.id)
       .single();
@@ -100,6 +100,73 @@ export async function PATCH(
         }
         
         result.message = 'Suggestion marked for testing';
+        break;
+
+      case 'auto_apply':
+        if (!suggestion.target_section || !suggestion.suggested_content) {
+          return NextResponse.json(
+            { success: false, error: 'Suggestion must have target_section and suggested_content for auto-apply' } as APIResponse,
+            { status: 400 }
+          );
+        }
+
+        // Handle different types of auto-apply suggestions
+        if (suggestion.target_section.endsWith('_order')) {
+          // Handle content reordering (highlights, services, testimonials)
+          const contentType = suggestion.target_section.replace('_order', '');
+          const newOrder = JSON.parse(suggestion.suggested_content);
+          
+          // Update order_index for each item
+          for (let i = 0; i < newOrder.length; i++) {
+            const { error: orderError } = await supabase
+              .from(contentType)
+              .update({ order_index: i })
+              .eq('id', newOrder[i].id)
+              .eq('landing_page_id', suggestion.landing_page_id);
+              
+            if (orderError) {
+              throw new Error(`Failed to reorder ${contentType}: ${orderError.message}`);
+            }
+          }
+        } else {
+          // Handle simple text field updates
+          const updateData: any = {};
+          
+          // Map AI target sections to actual database columns
+          const fieldMapping: { [key: string]: string } = {
+            'cta': 'cta_text',
+            'cta_text': 'cta_text',
+            'bio': 'bio',
+            'headline': 'headline',
+            'subheadline': 'subheadline',
+            'cta_url': 'cta_url',
+            'contact_email': 'contact_email'
+          };
+          
+          const dbField = fieldMapping[suggestion.target_section.toLowerCase()] || suggestion.target_section;
+          updateData[dbField] = suggestion.suggested_content;
+
+          const { error: landingPageError } = await supabase
+            .from('landing_pages')
+            .update(updateData)
+            .eq('id', suggestion.landing_page_id)
+            .eq('user_id', user.id);
+
+          if (landingPageError) {
+            throw new Error(`Failed to update landing page: ${landingPageError.message}`);
+          }
+        }
+
+        // Mark suggestion as implemented
+        await aiService.implementSuggestion(
+          suggestionId,
+          suggestion.suggested_content,
+          `Auto-applied AI suggestion for ${suggestion.target_section}`,
+          false,
+          supabase
+        );
+        
+        result.message = `Auto-applied suggestion for ${suggestion.target_section}`;
         break;
     }
 

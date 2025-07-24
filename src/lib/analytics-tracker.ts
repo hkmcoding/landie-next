@@ -104,21 +104,81 @@ class AnalyticsTracker {
     })
   }
 
+  async trackSectionView(sectionName: string, sectionIndex: number) {
+    return this.sendEvent('section_view', {
+      section: sectionName,
+      index: sectionIndex,
+      timestamp: new Date().toISOString()
+    })
+  }
+
+  // Initialize section view tracking with intersection observer
+  initializeSectionTracking(sections: { name: string; element: HTMLElement; index: number }[]) {
+    if (typeof window === 'undefined') return () => {}
+
+    // Track which sections have already been viewed to prevent duplicates
+    const viewedSections = new Set<string>()
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const sectionData = sections.find(s => s.element === entry.target)
+            if (sectionData && !viewedSections.has(sectionData.name)) {
+              viewedSections.add(sectionData.name)
+              this.trackSectionView(sectionData.name, sectionData.index)
+            }
+          }
+        })
+      },
+      {
+        threshold: 0.5, // Track when 50% of section is visible
+        rootMargin: '0px 0px -50px 0px' // Add some margin to avoid premature triggering
+      }
+    )
+
+    // Observe all sections
+    sections.forEach(section => {
+      observer.observe(section.element)
+    })
+
+    // Cleanup function
+    return () => {
+      observer.disconnect()
+      viewedSections.clear()
+    }
+  }
+
   // Initialize tracking when the page loads
   initializeTracking() {
+    let hasTrackedPageView = false
+    let hasTrackedUniqueVisitor = false
     
-    // Track page view and unique visitor immediately
-    this.trackPageView()
-    this.trackUniqueVisitor()
+    // Track page view and unique visitor immediately - but only once
+    if (!hasTrackedPageView) {
+      this.trackPageView()
+      hasTrackedPageView = true
+    }
+    
+    if (!hasTrackedUniqueVisitor) {
+      this.trackUniqueVisitor()
+      hasTrackedUniqueVisitor = true
+    }
 
-    // Track page time when user leaves
+    // Track page time when user leaves - but only once per session
+    let hasTrackedPageTime = false
+    
     const handleBeforeUnload = () => {
-      this.trackPageTime()
+      if (!hasTrackedPageTime) {
+        this.trackPageTime()
+        hasTrackedPageTime = true
+      }
     }
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
+      if (document.visibilityState === 'hidden' && !hasTrackedPageTime) {
         this.trackPageTime()
+        hasTrackedPageTime = true
       }
     }
 
@@ -126,16 +186,18 @@ class AnalyticsTracker {
     window.addEventListener('beforeunload', handleBeforeUnload)
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
-    // Track page time periodically (every 30 seconds)
-    const intervalId = setInterval(() => {
-      this.trackPageTime()
-    }, 30000)
+    // Remove the periodic tracking - this was causing inflated counts
+    // Instead, track page time once when user activity stops
 
     // Cleanup function
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      clearInterval(intervalId)
+      
+      // Track final page time if not already tracked
+      if (!hasTrackedPageTime) {
+        this.trackPageTime()
+      }
     }
   }
 }

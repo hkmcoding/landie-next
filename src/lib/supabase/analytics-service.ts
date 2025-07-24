@@ -14,7 +14,11 @@ import type {
 } from '@/types/dashboard'
 
 export class AnalyticsService {
-  private supabase = createClient()
+  private supabase: any
+
+  constructor(customClient?: any) {
+    this.supabase = customClient || createClient()
+  }
 
   async getAnalyticsData(userId: string, landingPageId: string, isPro: boolean = false): Promise<AnalyticsData> {
     // Get aggregated analytics summary for consistency with pro analytics
@@ -30,11 +34,12 @@ export class AnalyticsService {
       return this.getFallbackAnalyticsData(userId, landingPageId, isPro);
     }
 
+    // Only fetch individual data needed for arrays, use summary for counts
     const basicPromises = [
       this.getCtaClicks(userId, landingPageId),
       this.getAveragePageSession(userId, landingPageId),
-      this.getUniqueVisits(userId, landingPageId),
-      this.getPageViews(userId, landingPageId)
+      this.getUniqueVisits(userId, landingPageId)
+      // Remove getPageViews - use summary counts to prevent inflation
     ]
 
     const proPromises = isPro ? [
@@ -53,20 +58,20 @@ export class AnalyticsService {
       ctaClicks: (allResults[0] as CtaClick[]) || [],
       averagePageSession: (allResults[1] as PageTimeMV) || null,
       uniqueVisits: (allResults[2] as UniqueVisitor[]) || [],
-      pageViews: (allResults[3] as PageView[]) || [],
-      // Add aggregated counts from database function
+      pageViews: [], // Empty array - use summary counts only
+      // Use aggregated counts from database function to prevent inflation
       totalPageViews: summary.analytics?.total_page_views || 0,
       totalCtaClicks: summary.analytics?.total_cta_clicks || 0,
       totalUniqueVisitors: summary.analytics?.unique_visitors || 0
     }
 
-    if (isPro && allResults.length > 4) {
-      result.viewsOverTime = (allResults[4] as PageViewsHourlyMV[]) || []
-      result.ctaClicksOverTime = (allResults[5] as CtaClicksHourlyMV[]) || []
-      result.sectionDropoff = (allResults[6] as SectionDropoffMV[]) || []
-      result.sectionToCtaConversion = (allResults[7] as SectionToCtaMV[]) || []
-      result.contentChanges = (allResults[8] as ContentChange[]) || []
-      result.sectionViewEvents = (allResults[9] as SectionViewEvent[]) || []
+    if (isPro && allResults.length > 3) {
+      result.viewsOverTime = (allResults[3] as PageViewsHourlyMV[]) || []
+      result.ctaClicksOverTime = (allResults[4] as CtaClicksHourlyMV[]) || []
+      result.sectionDropoff = (allResults[5] as SectionDropoffMV[]) || []
+      result.sectionToCtaConversion = (allResults[6] as SectionToCtaMV[]) || []
+      result.contentChanges = (allResults[7] as ContentChange[]) || []
+      result.sectionViewEvents = (allResults[8] as SectionViewEvent[]) || []
     }
 
     return result
@@ -96,8 +101,8 @@ export class AnalyticsService {
       averagePageSession: (allResults[1] as PageTimeMV) || null,
       uniqueVisits: (allResults[2] as UniqueVisitor[]) || [],
       pageViews: (allResults[3] as PageView[]) || [],
-      // Use array lengths as fallback
-      totalPageViews: ((allResults[3] as PageView[]) || []).length,
+      // Use safer counts - avoid inflated array lengths
+      totalPageViews: await this.getSafePageViewCount(userId, landingPageId),
       totalCtaClicks: ((allResults[0] as CtaClick[]) || []).length,
       totalUniqueVisitors: ((allResults[2] as UniqueVisitor[]) || []).length
     }
@@ -112,6 +117,27 @@ export class AnalyticsService {
     }
 
     return result
+  }
+
+  private async getSafePageViewCount(userId: string, landingPageId: string): Promise<number> {
+    try {
+      // Use COUNT(*) with DISTINCT to avoid duplicates in fallback
+      const { count, error } = await this.supabase
+        .schema('analytics')
+        .from('page_views')
+        .select('*', { count: 'exact', head: true })
+        .eq('landing_page_id', landingPageId);
+
+      if (error) {
+        console.error('Error getting safe page view count:', error);
+        return 0;
+      }
+
+      return count || 0;
+    } catch (error) {
+      console.error('Error in getSafePageViewCount:', error);
+      return 0;
+    }
   }
 
   private async getCtaClicks(userId: string, landingPageId: string): Promise<CtaClick[]> {
@@ -238,8 +264,20 @@ export class AnalyticsService {
   }
 
   private async getSectionDropoff(userId: string, landingPageId: string): Promise<SectionDropoffMV[]> {
-    // TODO: Implement when we add section view tracking
-    return []
+    const { data, error } = await this.supabase
+      .schema('analytics')
+      .from('section_dropoff_mv')
+      .select('*')
+      .eq('landing_page_id', landingPageId)
+      .order('section_order', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching section dropoff:', error);
+      return [];
+    }
+
+    // Data already matches SectionDropoffMV interface
+    return data || [];
   }
 
   private async getSectionToCtaConversion(userId: string, landingPageId: string): Promise<SectionToCtaMV[]> {

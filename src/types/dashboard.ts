@@ -234,12 +234,11 @@ export interface PageViewsHourlyMV {
 }
 
 export interface SectionDropoffMV {
-  user_id: string;
   landing_page_id: string;
-  section_name: string;
-  total_views: number;
-  avg_view_duration: number;
-  avg_scroll_depth: number;
+  section_order: number;
+  section_slug: string;
+  views: number;
+  dropoffs: number;
   dropoff_rate: number;
 }
 

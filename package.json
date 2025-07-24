@@ -17,6 +17,9 @@
     "test:supabase:start": "supabase start --ignore-health-check",
     "test:supabase:stop": "supabase stop",
     "test:supabase:reset": "supabase db reset --debug",
+    "test:analytics": "vitest -c vitest.config.analytics.ts",
+    "test:analytics:ui": "vitest -c vitest.config.analytics.ts --ui",
+    "test:analytics:with-db": "yarn test:supabase:start && yarn test:analytics",
     "test:e2e:with-db": "yarn test:supabase:start && yarn test:e2e"
   },
   "dependencies": {

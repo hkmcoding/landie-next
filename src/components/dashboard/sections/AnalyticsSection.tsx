@@ -198,19 +198,6 @@ function OverviewTab({ analyticsData, isPro }: { analyticsData: AnalyticsData; i
                 </Card>
               )}
 
-              {analyticsData.sectionDropoff && analyticsData.sectionDropoff.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Target className="h-5 w-5" />
-                      Section Analysis
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <SectionAnalysis data={analyticsData.sectionDropoff} />
-                  </CardContent>
-                </Card>
-              )}
             </div>
           </div>
         </div>
@@ -331,26 +318,27 @@ function SectionAnalysis({ data }: { data: any[] }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {data.map((section, index) => (
-        <div key={index} className="space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="label capitalize">{section.section_name.replace('_', ' ')}</span>
-            <span className="text-sm text-muted-foreground">
-              {Math.round(section.dropoff_rate * 100)}% drop-off
-            </span>
-          </div>
-          <div className="flex-1 bg-muted rounded-full h-2 relative">
-            <div 
-              className="bg-primary rounded-full h-2 transition-all duration-300"
-              style={{ width: `${Math.max(0, 100 - (section.dropoff_rate * 100))}%` }}
-            />
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {section.total_views} views • {Math.round(section.avg_view_duration / 1000)}s avg time
-          </div>
-        </div>
+        <Card key={index} className="h-full">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium leading-tight min-h-[2.5rem] flex items-center capitalize">
+                {section.section_slug.replace('_', ' ')}
+              </CardTitle>
+              <TrendingUp className="h-5 w-5 text-primary flex-shrink-0" />
+            </div>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <div className="text-2xl font-bold">{Math.round(section.dropoff_rate * 100)}%</div>
+            <p className="text-sm text-muted-foreground">
+              {section.views} views • {section.dropoffs} drop-offs
+            </p>
+          </CardContent>
+        </Card>
       ))}
     </div>
   )
 }
+
+export { SectionAnalysis };

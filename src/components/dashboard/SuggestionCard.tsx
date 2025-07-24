@@ -26,12 +26,13 @@ import {
   Target,
   BarChart,
   MessageSquare,
-  Star
+  Star,
+  ExternalLink
 } from 'lucide-react';
 
 interface SuggestionCardProps {
   suggestionCard: SuggestionCardType;
-  onAction: (suggestionId: string, action: 'implement' | 'dismiss', data?: any) => Promise<void>;
+  onAction: (suggestionId: string, action: 'implement' | 'dismiss' | 'auto_apply', data?: any) => Promise<void>;
   showPerformance?: boolean;
 }
 
@@ -39,9 +40,83 @@ export function SuggestionCard({ suggestionCard, onAction, showPerformance = fal
   const { suggestion, performance } = suggestionCard;
   const [isExpanded, setIsExpanded] = useState(false);
   const [isImplementing, setIsImplementing] = useState(false);
+  const [isAutoApplying, setIsAutoApplying] = useState(false);
   const [implementationContent, setImplementationContent] = useState('');
   const [showImplementForm, setShowImplementForm] = useState(false);
   const [showDismissDialog, setShowDismissDialog] = useState(false);
+
+  // Determine if this suggestion can be auto-applied
+  const canAutoApply = () => {
+    if (!suggestion.target_section || !suggestion.suggested_content) {
+      return false;
+    }
+
+    // Determine if this is a simple change that can be auto-applied
+    const targetSection = suggestion.target_section.toLowerCase();
+    
+    // Simple text field updates that can be auto-applied
+    const simpleTextUpdates = [
+      'bio',
+      'headline', 
+      'subheadline',
+      'cta_text',
+      'cta',        // Maps to cta_text
+      'cta_url',
+      'contact_email'
+    ];
+
+    // Check if it's a simple text update
+    if (simpleTextUpdates.includes(targetSection)) {
+      return true;
+    }
+
+    // Only allow auto-apply for TRUE reordering (JSON array format with existing IDs)
+    // NOT for content replacement disguised as "reorganizing"
+    const looksLikeReordering = suggestion.suggested_content.trim().startsWith('[') && 
+                               suggestion.suggested_content.trim().endsWith(']');
+
+    if (looksLikeReordering && ['highlights', 'services', 'testimonials'].includes(targetSection)) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const handleAutoApply = async () => {
+    setIsAutoApplying(true);
+    try {
+      await onAction(suggestion.id, 'auto_apply', {
+        target_section: suggestion.target_section,
+        suggested_content: suggestion.suggested_content,
+        implementation_content: suggestion.suggested_content,
+        implementation_notes: `Auto-applied AI suggestion for ${suggestion.target_section} on ${new Date().toLocaleDateString()}`
+      });
+    } catch (error) {
+      console.error('Auto-apply error:', error);
+    } finally {
+      setIsAutoApplying(false);
+    }
+  };
+
+  const getDashboardTabUrl = () => {
+    const targetSection = suggestion.target_section?.toLowerCase();
+    
+    // Map target sections to correct dashboard sections
+    const sectionToTab: { [key: string]: string } = {
+      'highlights': '/dashboard?section=highlights',
+      'services': '/dashboard?section=services', 
+      'testimonials': '/dashboard?section=testimonials',
+      'bio': '/dashboard?section=about',  // Bio is in the About section
+      'headline': '/dashboard?section=profile',
+      'subheadline': '/dashboard?section=profile',
+      'cta': '/dashboard?section=cta',
+      'cta_text': '/dashboard?section=cta',
+      'cta_url': '/dashboard?section=cta',
+      'contact_email': '/dashboard?section=profile'
+    };
+
+    return sectionToTab[targetSection] || '/dashboard';
+  };
 
   const getPriorityVariant = (priority: string): 'danger' | 'warning' | 'success' | 'default' => {
     switch (priority) {
@@ -208,14 +283,37 @@ export function SuggestionCard({ suggestionCard, onAction, showPerformance = fal
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center mt-4">
           {!showImplementForm ? (
             <>
-              <Button
-                onClick={() => onAction(suggestion.id, 'implement', { implementation_content: 'Completed', implementation_notes: 'Marked as completed by user' })}
-                size="sm"
-                className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-              >
-                <CheckCircle className="w-4 h-4 mr-1" />
-                Mark Completed
-              </Button>
+              {canAutoApply() ? (
+                <Button
+                  onClick={handleAutoApply}
+                  disabled={isAutoApplying}
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+                >
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  {isAutoApplying ? 'Applying...' : 'Apply Now'}
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    onClick={() => window.open(getDashboardTabUrl(), '_blank')}
+                    size="sm"
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-1" />
+                    Go to Section
+                  </Button>
+                  <Button
+                    onClick={() => onAction(suggestion.id, 'implement', { implementation_content: 'Completed', implementation_notes: 'Marked as completed by user' })}
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    Mark Completed
+                  </Button>
+                </>
+              )}
               <Dialog open={showDismissDialog} onOpenChange={setShowDismissDialog}>
                 <DialogTrigger asChild>
                   <Button
