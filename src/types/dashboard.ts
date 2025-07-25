@@ -65,6 +65,10 @@ export interface Testimonial {
 export interface UserProStatus {
   user_id: string;
   is_pro: boolean;
+  pro_expires_at: string | null;
+  stripe_customer_id: string | null;
+  override_pro: boolean;
+  notes: string | null;
   updated_at: string;
 }
 

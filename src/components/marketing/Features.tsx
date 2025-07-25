@@ -6,25 +6,25 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 export default function Features() {
   const items = [
     {
-      img: "/images/features/convert-leads-192.webp",
+      img: "/images/features/conversion_icon.webp",
       title: "Convert More Leads",
       description:
         "Built-in CTAs and contact forms turn visitors into paying clients in seconds.",
     },
     {
-      img: "/images/features/actionable-analytics-192.webp",
+      img: "/images/features/actionable_analytics_icon.webp",
       title: "Actionable Analytics",
       description:
         "Track visits, clicks, and conversions in real time—know what’s working.",
     },
     {
-      img: "/images/features/code-free-startup-192.webp",
+      img: "/images/features/code_free_setup.webp",
       title: "Code-Free Setup",
       description:
         "Launch in minutes: fill in your info, hit publish—no dev help needed.",
     },
     {
-      img: "/images/features/ai-copy-assist-192.webp",
+      img: "/images/features/ai_copy_assist.webp",
       title: "AI Copy Assist",
       description:
         "Generate high-converting copy and blurbs with one click—goodbye writer’s block.",
@@ -49,7 +49,7 @@ export default function Features() {
                 alt={item.title}
                 width={192}
                 height={192}
-                className="mb-4"
+                className="mb-4 rounded-xl"
               />
               <CardContent className="p-0">
                 <CardHeader className="p-0 text-center">

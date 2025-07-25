@@ -9,7 +9,7 @@ export default function FooterCTA() {
         <h2 className="heading-2 text-primary-foreground">Ready to grow your business?</h2>
         <p className="paragraph text-primary-foreground">Get started with a free trial—no credit card required!</p>
         
-        <a href="/start-free" className="inline-flex mx-auto">
+        <a href="/register" className="inline-flex mx-auto">
           <Button variant='secondary' round>
             Start Free Trial
           </Button>

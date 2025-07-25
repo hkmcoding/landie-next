@@ -9,7 +9,7 @@ export default function Wizard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 items-center gap-x-16 gap-y-12">
           {/* Illustration */}
             <Image
-              src="/images/ai-section-hero.webp"
+              src="/images/onboarding-image.webp"
               alt="AI Wizard Illustration"
               width={600}
               height={400}
@@ -20,9 +20,9 @@ export default function Wizard() {
           <div className="space-y-6">
             <h2 className="heading-2">Your AI Page-Building Coach.</h2>
             <p className="paragraph text-muted-foreground">
-              Answer a few simple questions and our AI Wizard will craft your page structure, write copy suggestions, and set up SEO—ready in under 2 minutes.
+              Answer a few simple questions and our AI Wizard will craft your page structure, write copy suggestions, and set up SEO—ready in under 10 minutes.
             </p>
-            <ul className="space-y-2 list-disc pl-5 paragraph">
+            <ul className="space-y-2 list-disc pl-5 paragraph mb-4">
               <li>Clear, benefit-driven service descriptions</li>
               <li>Engaging highlights section auto-filled for you</li>
               <li>Instant preview—tweak copy and publish</li>

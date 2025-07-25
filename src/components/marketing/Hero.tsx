@@ -20,7 +20,7 @@ export default function Hero() {
               Landie handles the tech—no code, no credit card required. Leverage AI-powered recommendations to boost your client sign-ups. Let us craft your landing page so you can focus on coaching.
             </p>
             <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
-              <a href="/start-free">
+              <a href="/register">
                 <Button>
                   Start Free Trial
                 </Button>
@@ -36,7 +36,7 @@ export default function Hero() {
           {/* Image block */}
           <div className="relative w-full">
             <Image
-              src="/images/hero-image.webp"
+              src="/images/new-hero-image-final.webp"
               alt="Landie dashboard on laptop and mobile"
               width={1200}
               height={800}

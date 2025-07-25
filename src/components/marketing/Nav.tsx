@@ -64,7 +64,7 @@ export function Nav() {
             Sign In
           </Link>
           <Link
-            href=""
+            href="/register"
             className="paragraph-md px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition"
           >
             Start Free Trial
@@ -100,7 +100,7 @@ export function Nav() {
                   Sign In
                 </Link>
                 <Link
-                  href=""
+                  href="/register"
                   className="mt-2 paragraph-md px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition"
                 >
                   Start Free Trial

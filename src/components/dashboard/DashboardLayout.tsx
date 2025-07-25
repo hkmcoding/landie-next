@@ -23,6 +23,9 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { DashboardSection } from "@/types/dashboard"
 import Image from 'next/image';
 import { ImageFallback } from '@/components/ui/ImageFallback';
+import { PlanIndicator } from '@/components/ui/PlanIndicator';
+import { useProStatus } from '@/hooks/useProStatus';
+import { useRouter } from 'next/navigation';
 
 // Settings Menu Component
 function SettingsMenu() {
@@ -142,6 +145,12 @@ export function DashboardLayout({
   isPro = false
 }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const proStatus = useProStatus()
+  const router = useRouter()
+  
+  const handleUpgrade = () => {
+    router.push('/pricing')
+  }
   
 
 
@@ -156,13 +165,20 @@ export function DashboardLayout({
     <div className="flex h-screen bg-background">
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b h-16 flex items-center justify-between px-4">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-            <Home className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+              <Home className="h-4 w-4 text-primary-foreground" />
+            </div>
             <h2 className="subtitle-3 font-semibold">Dashboard</h2>
           </div>
+        </div>
+        <div className="mt-3">
+          <PlanIndicator 
+            plan={proStatus.plan}
+            expiresAt={proStatus.expiresAt ? new Date(proStatus.expiresAt) : null}
+            onUpgrade={handleUpgrade}
+          />
         </div>
         <Button
           variant="ghost"
@@ -189,14 +205,21 @@ export function DashboardLayout({
         lg:translate-x-0 lg:block
       `}>
         {/* Desktop Sidebar Header */}
-        <div className="hidden lg:flex items-center gap-2 p-6 border-b">
-          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-            <Home className="h-4 w-4 text-primary-foreground" />
+        <div className="hidden lg:block p-6 border-b">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+              <Home className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <div>
+              <h2 className="subtitle-3 font-semibold">Dashboard</h2>
+              <p className="text-description text-sm">Landie</p>
+            </div>
           </div>
-          <div>
-            <h2 className="subtitle-3 font-semibold">Dashboard</h2>
-            <p className="text-description">Landie</p>
-          </div>
+          <PlanIndicator 
+            plan={proStatus.plan}
+            expiresAt={proStatus.expiresAt ? new Date(proStatus.expiresAt) : null}
+            onUpgrade={handleUpgrade}
+          />
         </div>
 
         {/* Mobile Sidebar Header */}
