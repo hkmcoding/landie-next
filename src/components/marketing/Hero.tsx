@@ -13,8 +13,8 @@ export default function Hero() {
           
           {/* Text block */}
           <div className="space-y-6">
-            <h1 className="heading-1">
-              Turn Followers into Paying Clients in 10 Minutes
+            <h1 className="heading-3 md:heading-1">
+              Landie: Audience Engagement Meets Real Conversion.
             </h1>
             <p className="paragraph text-muted-foreground">
               Landie handles the tech—no code, no credit card required. Leverage AI-powered recommendations to boost your client sign-ups. Let us craft your landing page so you can focus on coaching.

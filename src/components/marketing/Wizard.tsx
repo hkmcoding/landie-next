@@ -22,12 +22,12 @@ export default function Wizard() {
             <p className="paragraph text-muted-foreground">
               Answer a few simple questions and our AI Wizard will craft your page structure, write copy suggestions, and set up SEO—ready in under 10 minutes.
             </p>
-            <ul className="space-y-2 list-disc pl-5 paragraph mb-4">
+            <ul className="space-y-2 list-disc pl-5 paragraph">
               <li>Clear, benefit-driven service descriptions</li>
               <li>Engaging highlights section auto-filled for you</li>
               <li>Instant preview—tweak copy and publish</li>
             </ul>
-            <a href='/login'>
+            <a href='/login' className="block">
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 Try the AI Wizard
               </Button>
