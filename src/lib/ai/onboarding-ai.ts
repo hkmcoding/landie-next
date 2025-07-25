@@ -15,6 +15,7 @@ export async function callAi(type: AiType, userId: string, onboardingData: Onboa
     body: JSON.stringify({
       userId,
       onboarding: onboardingData,
+      count: type === 'services' ? onboardingData.servicesCount : type === 'highlights' ? onboardingData.highlightsCount : undefined,
     }),
   });
 

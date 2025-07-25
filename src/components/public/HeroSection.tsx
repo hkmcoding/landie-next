@@ -17,19 +17,22 @@ export function HeroSection({ landingPage, profileOnly = false }: HeroSectionPro
 
   // If profileOnly mode, just return the profile image
   if (profileOnly) {
-    if (!profileImage) {
-      return <ImageFallback size={120} rounded="full" />;
-    }
     return (
-      <Image
-        src={profileImage}
-        alt={name || 'Profile'}
-        width={120}
-        height={120}
-        priority
-        className="rounded-full object-cover"
-        sizes="120px"
-      />
+      <div className="flex items-center justify-center w-full h-full">
+        {!profileImage ? (
+          <ImageFallback size={120} rounded="full" />
+        ) : (
+          <Image
+            src={profileImage}
+            alt={name || 'Profile'}
+            width={120}
+            height={120}
+            priority
+            className="rounded-full object-cover"
+            sizes="120px"
+          />
+        )}
+      </div>
     );
   }
 

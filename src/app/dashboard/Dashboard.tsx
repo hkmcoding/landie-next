@@ -12,22 +12,32 @@ import { HighlightsSection } from '@/components/dashboard/sections/HighlightsSec
 import { TestimonialsSection } from '@/components/dashboard/sections/TestimonialsSection'
 import { AnalyticsSection } from '@/components/dashboard/sections/AnalyticsSection'
 import { DashboardSection, DashboardData } from '@/types/dashboard'
-import { DashboardDataProvider } from '@/contexts/DashboardDataContext'
+import { DashboardDataProvider, useDashboardData } from '@/contexts/DashboardDataContext'
 
 interface DashboardProps {
   initialData: DashboardData
+  authEmail: string
 }
 
-export default function Dashboard({ initialData }: DashboardProps) {
+function DashboardContent({ authEmail }: { authEmail: string }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const activeSection = (searchParams.get('section') as DashboardSection) || 'profile'
+  const { data, updateData } = useDashboardData()
   
-  const handleDataUpdate = (newData: Partial<DashboardData>) => {
-    // This is where you'll handle data updates in the future.
-    // For now, we'll just log the update.
-    console.log('Dashboard data update:', newData)
+  console.log('🔍 DEBUG Dashboard: authEmail received:', authEmail);
+  
+  // Client-side guard: redirect if no landing page data
+  React.useEffect(() => {
+    if (!data?.landingPage) {
+      router.replace('/onboarding');
+    }
+  }, [data?.landingPage, router]);
+  
+  // Show loading skeleton while redirecting
+  if (!data?.landingPage) {
+    return <div className="p-6">Redirecting to onboarding...</div>;
   }
 
   const handleSectionChange = (section: DashboardSection) => {
@@ -39,43 +49,50 @@ export default function Dashboard({ initialData }: DashboardProps) {
   const renderActiveSection = () => {
     switch (activeSection) {
       case 'profile':
-        return <ProfileSection landingPage={initialData.landingPage} onUpdate={handleDataUpdate} />
+        return <ProfileSection landingPage={data.landingPage} onUpdate={updateData} />
       case 'analytics':
-        return <AnalyticsSection dashboardData={initialData} userId={initialData.landingPage?.user_id || ''} />
+        return <AnalyticsSection dashboardData={data} userId={data.landingPage?.user_id || ''} />
       case 'services':
-        return <ServicesSection services={initialData.services} landingPageId={initialData.landingPage?.id} onUpdate={handleDataUpdate} />
+        return <ServicesSection services={data.services} landingPageId={data.landingPage?.id} onUpdate={updateData} />
       case 'highlights':
-        return <HighlightsSection highlights={initialData.highlights} landingPageId={initialData.landingPage?.id} onUpdate={handleDataUpdate} />
+        return <HighlightsSection highlights={data.highlights} landingPageId={data.landingPage?.id} onUpdate={updateData} />
       case 'testimonials':
-        return <TestimonialsSection testimonials={initialData.testimonials} landingPageId={initialData.landingPage?.id} onUpdate={handleDataUpdate} />
+        return <TestimonialsSection testimonials={data.testimonials} landingPageId={data.landingPage?.id} onUpdate={updateData} />
       case 'social':
-        return <SocialLinksSection landingPage={initialData.landingPage} onUpdate={handleDataUpdate} />
+        return <SocialLinksSection landingPage={data.landingPage} onUpdate={updateData} />
       case 'cta':
-        return <CallToActionSection landingPage={initialData.landingPage} onUpdate={handleDataUpdate} />
+        return <CallToActionSection landingPage={data.landingPage} onUpdate={updateData} />
       case 'about':
-        return <AboutSection landingPage={initialData.landingPage} onUpdate={handleDataUpdate} />
+        return <AboutSection landingPage={data.landingPage} onUpdate={updateData} />
       default:
         return null
     }
   }
 
-  const isPro = Boolean(initialData?.userProStatus?.is_pro);
+  const isPro = Boolean(data?.userProStatus?.is_pro);
 
   return (
+    <DashboardLayout
+      activeSection={activeSection}
+      onSectionChange={handleSectionChange}
+      authEmail={authEmail}
+      userInfo={{
+        name: data?.landingPage?.name ?? undefined,
+        email: data?.landingPage?.contact_email ?? undefined,
+        profileImage: data?.landingPage?.profile_image_url ?? undefined,
+        username: data?.landingPage?.username ?? undefined,
+      }}
+      isPro={isPro}
+    >
+      {renderActiveSection()}
+    </DashboardLayout>
+  )
+}
+
+export default function Dashboard({ initialData, authEmail }: DashboardProps) {
+  return (
     <DashboardDataProvider initialData={initialData}>
-      <DashboardLayout
-        activeSection={activeSection}
-        onSectionChange={handleSectionChange}
-        userInfo={{
-          name: initialData?.landingPage?.name ?? undefined,
-          email: initialData?.landingPage?.contact_email ?? undefined,
-          profileImage: initialData?.landingPage?.profile_image_url ?? undefined,
-          username: initialData?.landingPage?.username ?? undefined,
-        }}
-        isPro={isPro}
-      >
-        {renderActiveSection()}
-      </DashboardLayout>
+      <DashboardContent authEmail={authEmail} />
     </DashboardDataProvider>
   )
 } 

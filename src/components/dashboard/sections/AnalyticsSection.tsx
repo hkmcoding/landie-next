@@ -94,7 +94,8 @@ export function AnalyticsSection({ dashboardData, userId }: AnalyticsSectionProp
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="marketing" disabled={!isPro}>
-            AI Marketing Assistant
+            <span className="hidden sm:inline">AI Marketing Assistant</span>
+            <span className="sm:hidden">AI Assistant</span>
           </TabsTrigger>
         </TabsList>
 
@@ -179,30 +180,6 @@ function OverviewTab({ analyticsData, isPro }: { analyticsData: AnalyticsData; i
         </Card>
       </div>
 
-      {isPro && (
-        <div className="space-y-6">
-          <div>
-            <h3 className="heading-4 mb-4">Pro Analytics</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {analyticsData.viewsOverTime && analyticsData.viewsOverTime.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5" />
-                      Views Over Time
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ViewsChart data={analyticsData.viewsOverTime} />
-                  </CardContent>
-                </Card>
-              )}
-
-            </div>
-          </div>
-        </div>
-      )}
-
       {!isPro && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
@@ -226,7 +203,8 @@ function OverviewTab({ analyticsData, isPro }: { analyticsData: AnalyticsData; i
               </li>
               <li className="flex items-center gap-2">
                 <Zap className="h-4 w-4 text-primary" />
-                AI Marketing Assistant
+                <span className="hidden sm:inline">AI Marketing Assistant</span>
+                <span className="sm:hidden">AI Assistant</span>
               </li>
             </ul>
           </CardContent>
@@ -247,7 +225,8 @@ function MarketingAssistantTab({ analyticsData, dashboardData }: { analyticsData
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Zap className="h-5 w-5" />
-              AI Marketing Assistant
+              <span className="hidden sm:inline">AI Marketing Assistant</span>
+              <span className="sm:hidden">AI Assistant</span>
             </CardTitle>
           </CardHeader>
           <CardContent>

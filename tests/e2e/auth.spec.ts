@@ -37,7 +37,6 @@ test.describe('Authentication Flow', () => {
     await expect(page.locator('h1')).toContainText('Sign Up')
     
     // Fill the registration form using accessible selectors
-    await page.getByRole('textbox', { name: /username/i }).fill(username)
     await page.getByRole('textbox', { name: /email/i }).fill(email)
     
     const passwordFields = page.getByRole('textbox', { name: /password/i })
@@ -47,8 +46,8 @@ test.describe('Authentication Flow', () => {
     // Submit the form
     await page.getByRole('button', { name: /sign up/i }).click()
     
-    // Should show success message or redirect
-    await expect(page.locator('text=Check your email')).toBeVisible({ timeout: 10000 })
+    // Should show success message and redirect
+    await expect(page.locator('text=Account created successfully')).toBeVisible({ timeout: 10000 })
   })
 
   test('should sign in existing user', async ({ page }) => {
@@ -108,7 +107,6 @@ test.describe('Authentication Flow', () => {
     await page.goto('/register')
     
     // Fill invalid email
-    await page.getByRole('textbox', { name: /username/i }).fill('testuser')
     const emailField = page.getByRole('textbox', { name: /email/i })
     await emailField.fill('invalid-email')
     
@@ -128,7 +126,6 @@ test.describe('Authentication Flow', () => {
   test('should validate password match on signup', async ({ page }) => {
     await page.goto('/register')
     
-    await page.getByRole('textbox', { name: /username/i }).fill('testuser')
     await page.getByRole('textbox', { name: /email/i }).fill('test@example.com')
     
     const passwordFields = page.getByRole('textbox', { name: /password/i })

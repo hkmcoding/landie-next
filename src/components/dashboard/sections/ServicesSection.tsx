@@ -12,6 +12,7 @@ import { MultiFileInput } from "@/components/ui/multi-file-input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Service, DashboardData, CreateServiceInput } from "@/types/dashboard"
 import { DashboardServiceClient } from "@/lib/supabase/dashboard-service-client"
@@ -55,7 +56,7 @@ interface ServicesSectionProps {
 interface SortableServiceCardProps {
   service: Service
   onEdit: (service: Service) => void
-  onDelete: (serviceId: string) => void
+  onDelete: (service: Service) => void
 }
 
 function SortableServiceCard({ service, onEdit, onDelete }: SortableServiceCardProps) {
@@ -118,7 +119,7 @@ function SortableServiceCard({ service, onEdit, onDelete }: SortableServiceCardP
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onDelete(service.id)}
+              onClick={() => onDelete(service)}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -175,6 +176,9 @@ export function ServicesSection({ services, landingPageId, onUpdate }: ServicesS
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingService, setEditingService] = useState<Service | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   
   const supabase = createClient()
   const dashboardService = new DashboardServiceClient()
@@ -242,13 +246,25 @@ export function ServicesSection({ services, landingPageId, onUpdate }: ServicesS
     setIsDialogOpen(true)
   }
 
-  const handleDeleteService = async (serviceId: string) => {
+  const handleDeleteService = async (service: Service) => {
+    setServiceToDelete(service)
+    setIsDeleteModalOpen(true)
+  }
+
+  const confirmDeleteService = async () => {
+    if (!serviceToDelete) return
+    
     try {
-      await dashboardService.deleteService(serviceId)
-      const updatedServices = services.filter(s => s.id !== serviceId)
+      setIsDeleting(true)
+      await dashboardService.deleteService(serviceToDelete.id)
+      const updatedServices = services.filter(s => s.id !== serviceToDelete.id)
       onUpdate({ services: updatedServices })
+      setIsDeleteModalOpen(false)
+      setServiceToDelete(null)
     } catch (error) {
       console.error('Error deleting service:', error)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -489,6 +505,16 @@ export function ServicesSection({ services, landingPageId, onUpdate }: ServicesS
           </CardContent>
         </Card>
       )}
+
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDeleteService}
+        title="Delete Service"
+        description={`Are you sure you want to delete "${serviceToDelete?.title}"? This action cannot be undone.`}
+        confirmText="Delete Service"
+        isLoading={isDeleting}
+      />
     </div>
   )
 }

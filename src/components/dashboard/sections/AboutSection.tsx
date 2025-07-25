@@ -69,12 +69,12 @@ export function AboutSection({ landingPage, onUpdate }: AboutSectionProps) {
       content: "I'm a certified personal trainer with over 8 years of experience helping busy professionals transform their health and fitness. My approach combines evidence-based training methods with sustainable lifestyle changes.\n\nI specialize in:\n• Strength training and muscle building\n• Weight loss and body composition\n• Functional movement and injury prevention\n• Nutrition coaching and meal planning\n\nWhen I'm not in the gym, I love hiking, cooking healthy meals, and spending time with my family. I believe that fitness should enhance your life, not complicate it."
     },
     {
-      title: "Business Coach",
-      content: "As a business strategist and coach, I've helped over 200 entrepreneurs build profitable, sustainable businesses. My background in corporate strategy and entrepreneurship gives me unique insights into what actually works in today's market.\n\nI work with:\n• Early-stage entrepreneurs looking to validate their ideas\n• Established business owners ready to scale\n• Teams needing strategic direction and accountability\n• Anyone wanting to build systems that work without them\n\nMy mission is to help you build a business that serves your life, not the other way around."
+      title: "Powerlifting Coach",
+      content: "As a competitive powerlifter and certified coach, I've helped athletes of all levels build incredible strength and compete with confidence. My background in biomechanics and sport psychology gives me unique insights into maximizing performance.\n\nI work with:\n• Beginner lifters learning proper technique\n• Intermediate athletes breaking through plateaus\n• Competitive powerlifters preparing for meets\n• Anyone wanting to get seriously strong\n\nMy mission is to help you discover your true strength potential while staying injury-free and having fun in the process."
     },
     {
-      title: "Life Coach",
-      content: "I'm passionate about helping people discover their authentic selves and create lives they truly love. Through my work as a certified life coach, I've supported hundreds of clients in making meaningful changes.\n\nMy specialties include:\n• Career transitions and purpose discovery\n• Relationship and communication skills\n• Confidence and self-worth development\n• Goal setting and accountability\n\nI believe everyone has the potential to create positive change in their life. Sometimes we just need the right support and tools to get there."
+      title: "Lifestyle/Fitness Coach",
+      content: "I'm passionate about helping people create sustainable, healthy lifestyles that fit their unique goals and circumstances. Through my work as a certified lifestyle coach, I've supported hundreds of clients in making lasting changes.\n\nMy specialties include:\n• Fitness habit formation and consistency\n• Nutrition mindset and healthy relationships with food\n• Work-life balance and stress management\n• Confidence building through physical achievement\n\nI believe everyone deserves to feel strong, energized, and confident in their body. Sometimes we just need the right support and strategies to get there."
     }
   ]
 

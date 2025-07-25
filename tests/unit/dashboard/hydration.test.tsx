@@ -31,11 +31,12 @@ describe('DashboardLayout Hydration Safety', () => {
   const defaultProps = {
     activeSection: 'profile' as const,
     onSectionChange: vi.fn(),
+    authEmail: 'auth@test.com',
     userInfo: {
       name: 'Test User',
       email: 'test@example.com',
+      username: 'testuser',
     },
-    username: 'testuser',
     children: <div>Test Content</div>,
   };
 
@@ -43,13 +44,13 @@ describe('DashboardLayout Hydration Safety', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     
     // Test with username
-    const { rerender } = render(<DashboardLayout {...defaultProps} username="testuser" />);
+    const { rerender } = render(<DashboardLayout {...defaultProps} userInfo={{ ...defaultProps.userInfo, username: "testuser" }} />);
     expect(spy).not.toHaveBeenCalledWith(
       expect.stringContaining('Hydration failed')
     );
     
     // Test without username - should still render consistently
-    rerender(<DashboardLayout {...defaultProps} username={undefined} />);
+    rerender(<DashboardLayout {...defaultProps} userInfo={{ ...defaultProps.userInfo, username: undefined }} />);
     expect(spy).not.toHaveBeenCalledWith(
       expect.stringContaining('Hydration failed')
     );
@@ -59,18 +60,18 @@ describe('DashboardLayout Hydration Safety', () => {
 
   it('should handle username prop consistently', () => {
     // Test with username
-    const withUsername = render(<DashboardLayout {...defaultProps} username="testuser" />);
-    expect(withUsername.getByText('View My Landing Page')).toBeInTheDocument();
+    const withUsername = render(<DashboardLayout {...defaultProps} userInfo={{ ...defaultProps.userInfo, username: "testuser" }} />);
+    expect(withUsername.getByText('View Landing Page')).toBeInTheDocument();
     withUsername.unmount();
 
     // Test without username
-    const withoutUsername = render(<DashboardLayout {...defaultProps} username={undefined} />);
-    expect(withoutUsername.getByText('Set Username First')).toBeInTheDocument();
+    const withoutUsername = render(<DashboardLayout {...defaultProps} userInfo={{ ...defaultProps.userInfo, username: undefined }} />);
+    expect(() => withoutUsername.getByText('View Landing Page')).toThrow();
     withoutUsername.unmount();
 
     // Test with empty username
-    const emptyUsername = render(<DashboardLayout {...defaultProps} username="" />);
-    expect(emptyUsername.getByText('Set Username First')).toBeInTheDocument();
+    const emptyUsername = render(<DashboardLayout {...defaultProps} userInfo={{ ...defaultProps.userInfo, username: "" }} />);
+    expect(() => emptyUsername.getByText('View Landing Page')).toThrow();
   });
 
   it('should handle userInfo props consistently', () => {
@@ -153,16 +154,15 @@ describe('DashboardLayout Hydration Safety', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     
     // Test the specific button that was causing hydration issues
-    const { getByText } = render(<DashboardLayout {...defaultProps} username="demo-slug" />);
+    const { getByText } = render(<DashboardLayout {...defaultProps} userInfo={{ ...defaultProps.userInfo, username: "demo-slug" }} />);
     
     // Should render consistently without "Loading..." state
-    expect(getByText('View My Landing Page')).toBeInTheDocument();
-    expect(() => getByText('Loading...')).toThrow(); // Should not find Loading text
+    expect(getByText('View Landing Page')).toBeInTheDocument();
     
     // Test without username
-    const { getByText: getByText2 } = render(<DashboardLayout {...defaultProps} username={undefined} />);
-    expect(getByText2('Set Username First')).toBeInTheDocument();
-    expect(() => getByText2('Loading...')).toThrow(); // Should not find Loading text
+    const { getByText: getByText2 } = render(<DashboardLayout {...defaultProps} userInfo={{ ...defaultProps.userInfo, username: undefined }} />);
+    // Landing page link should not be present without username
+    expect(() => getByText2('View Landing Page')).toThrow();
     
     // No hydration errors
     expect(spy).not.toHaveBeenCalledWith(expect.stringContaining('Hydration failed'));

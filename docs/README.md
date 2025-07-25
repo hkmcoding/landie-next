@@ -17,6 +17,21 @@ Performance optimization and verification documentation:
 ### `/guides`
 General guides and tutorials (for future documentation)
 
+## Recent Changes
+
+### Dashboard Updates
+- **Sidebar Email Display**: Sidebar now always shows the auth email on record (from Supabase Auth) instead of the editable contact_email field
+- **Onboarding Redirect**: Users without completed landing pages are automatically redirected from `/dashboard` to `/onboarding`
+
+### Routing Rules
+- **`/dashboard`**: Requires authentication AND completed onboarding (landing page exists)
+  - Authenticated users without landing pages → redirected to `/onboarding`
+  - Unauthenticated users → redirected to `/login`
+  - Completed users → dashboard loads normally
+- **`/onboarding`**: Requires authentication only
+  - Guides users through landing page creation process
+  - Redirects to `/dashboard` upon completion
+
 ## Other Project Files
 
 ### Root Files

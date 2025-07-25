@@ -45,9 +45,6 @@ export function ContactSection({ landingPage }: ContactSectionProps) {
                     <h3 className="subtitle-4 text-slate-800">
                       Email Me
                     </h3>
-                    <p className="caption text-slate-600">
-                      {landingPage.contact_email}
-                    </p>
                   </div>
                   
                   <div className="shrink-0">

@@ -222,7 +222,7 @@ export function AnalyticsOverview({ analytics, landingPageId }: AnalyticsOvervie
       )}
 
       {/* Trends Summary */}
-      {trends && (
+      {trends && trends.insights && trends.insights.keyChanges && trends.insights.keyChanges.length > 0 && (
         <Card className="p-4">
           <h3 className="subtitle-2 mb-3">7-Day Trends</h3>
           <div className="space-y-2">

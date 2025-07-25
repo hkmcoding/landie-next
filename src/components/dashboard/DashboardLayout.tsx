@@ -88,13 +88,13 @@ function SettingsMenu() {
             </button>
 
             {/* Support */}
-            <button
+            {/* <button
               onClick={openSupport}
               className="w-full px-4 py-4 text-left flex items-center gap-3 hover:bg-muted transition-colors"
             >
               <HelpCircle className="w-5 h-5 text-muted-foreground" />
               <span className="text-sm font-medium">Help & Support</span>
-            </button>
+            </button> */}
 
             <hr className="border-border my-2" />
 
@@ -117,6 +117,7 @@ interface DashboardLayoutProps {
   children: React.ReactNode
   activeSection: DashboardSection
   onSectionChange: (section: DashboardSection) => void
+  authEmail: string
   userInfo?: {
     name?: string
     email?: string
@@ -141,12 +142,15 @@ export function DashboardLayout({
   children, 
   activeSection, 
   onSectionChange, 
+  authEmail,
   userInfo,
   isPro = false
 }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const proStatus = useProStatus()
   const router = useRouter()
+  
+  console.log('🔍 DEBUG DashboardLayout: authEmail received:', authEmail);
   
   const handleUpgrade = () => {
     router.push('/pricing')
@@ -172,13 +176,6 @@ export function DashboardLayout({
             </div>
             <h2 className="subtitle-3 font-semibold">Dashboard</h2>
           </div>
-        </div>
-        <div className="mt-3">
-          <PlanIndicator 
-            plan={proStatus.plan}
-            expiresAt={proStatus.expiresAt ? new Date(proStatus.expiresAt) : null}
-            onUpgrade={handleUpgrade}
-          />
         </div>
         <Button
           variant="ghost"
@@ -292,15 +289,18 @@ export function DashboardLayout({
         <div className="border-t p-4">
           <div className="flex items-center gap-3">
             {userInfo?.profileImage ? (
-              <Image
-                src={userInfo.profileImage}
-                alt={userInfo?.name || 'Profile'}
-                width={40}
-                height={40}
-                loading="lazy"
-                className="rounded-full object-cover"
-                sizes="40px"
-              />
+              <div className="w-[40px] h-[40px] rounded-full overflow-hidden bg-white flex-shrink-0">
+                <Image
+                  src={userInfo.profileImage}
+                  alt={userInfo?.name || 'Profile'}
+                  width={40}
+                  height={40}
+                  loading="lazy"
+                  className="w-[40px] h-[40px] object-cover"
+                  style={{ width: '40px', height: '40px' }}
+                  sizes="40px"
+                />
+              </div>
             ) : (
               <ImageFallback size={40} rounded="full" />
             )}
@@ -309,10 +309,18 @@ export function DashboardLayout({
                 {userInfo?.name || 'User'}
               </p>
               <p className="caption-sm text-muted-foreground truncate">
-                {userInfo?.email || 'user@example.com'}
+                {authEmail}
               </p>
             </div>
             <SettingsMenu />
+          </div>
+          {/* PlanIndicator for mobile only */}
+          <div className="lg:hidden mt-4">
+            <PlanIndicator 
+              plan={proStatus.plan}
+              expiresAt={proStatus.expiresAt ? new Date(proStatus.expiresAt) : null}
+              onUpgrade={handleUpgrade}
+            />
           </div>
         </div>
       </div>

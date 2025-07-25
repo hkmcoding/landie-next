@@ -11,6 +11,7 @@ import { FormField } from "@/components/ui/form-field"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Highlight, DashboardData } from "@/types/dashboard"
 import { DashboardServiceClient } from "@/lib/supabase/dashboard-service-client"
@@ -47,7 +48,7 @@ interface HighlightsSectionProps {
 interface SortableHighlightCardProps {
   highlight: Highlight
   onEdit: (highlight: Highlight) => void
-  onDelete: (highlightId: string) => void
+  onDelete: (highlight: Highlight) => void
 }
 
 function SortableHighlightCard({ highlight, onEdit, onDelete }: SortableHighlightCardProps) {
@@ -105,7 +106,7 @@ function SortableHighlightCard({ highlight, onEdit, onDelete }: SortableHighligh
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onDelete(highlight.id)}
+              onClick={() => onDelete(highlight)}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -125,6 +126,9 @@ export function HighlightsSection({ highlights, landingPageId, onUpdate }: Highl
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingHighlight, setEditingHighlight] = useState<Highlight | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [highlightToDelete, setHighlightToDelete] = useState<Highlight | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   
   const dashboardService = new DashboardServiceClient()
 
@@ -183,13 +187,28 @@ export function HighlightsSection({ highlights, landingPageId, onUpdate }: Highl
     setIsDialogOpen(true)
   }
 
-  const handleDeleteHighlight = async (highlightId: string) => {
+  const handleDeleteHighlight = async (highlight: Highlight) => {
+    setHighlightToDelete(highlight)
+    setIsDeleteModalOpen(true)
+  }
+
+  const confirmDeleteHighlight = async () => {
+    if (!highlightToDelete) return
+    
     try {
-      await dashboardService.deleteHighlight(highlightId)
-      const updatedHighlights = highlights.filter(h => h.id !== highlightId)
+      setIsDeleting(true)
+      console.log('🔍 DEBUG: Deleting highlight:', highlightToDelete.id)
+      await dashboardService.deleteHighlight(highlightToDelete.id)
+      const updatedHighlights = highlights.filter(h => h.id !== highlightToDelete.id)
+      console.log('🔍 DEBUG: Updated highlights:', updatedHighlights)
+      console.log('🔍 DEBUG: Calling onUpdate with highlights')
       onUpdate({ highlights: updatedHighlights })
+      setIsDeleteModalOpen(false)
+      setHighlightToDelete(null)
     } catch (error) {
       console.error('Error deleting highlight:', error)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -336,6 +355,16 @@ export function HighlightsSection({ highlights, landingPageId, onUpdate }: Highl
           </CardContent>
         </Card>
       )}
+
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDeleteHighlight}
+        title="Delete Highlight"
+        description={`Are you sure you want to delete "${highlightToDelete?.header}"? This action cannot be undone.`}
+        confirmText="Delete Highlight"
+        isLoading={isDeleting}
+      />
     </div>
   )
 }

@@ -43,18 +43,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user pro status
-    const { data: proStatus } = await supabase
+    const { data: proStatus, error: proError } = await supabase
       .from('user_pro_status')
-      .select('is_pro, ai_uses_remaining')
+      .select('is_pro')
       .eq('user_id', user.id)
       .single();
+
+    console.log('🔍 DEBUG AI Analysis - User ID:', user.id);
+    console.log('🔍 DEBUG AI Analysis - Pro Status:', proStatus);
+    console.log('🔍 DEBUG AI Analysis - Pro Error:', proError);
 
     // Check if this is a dev route request
     const referer = request.headers.get('referer');
     const isDevRoute = referer?.includes('/dev/');
     
+    console.log('🔍 DEBUG AI Analysis - Referer:', referer);
+    console.log('🔍 DEBUG AI Analysis - Is Dev Route:', isDevRoute);
+    console.log('🔍 DEBUG AI Analysis - Is Pro:', proStatus?.is_pro);
+    
     // Only allow access for pro users or dev routes
     if (!proStatus?.is_pro && !isDevRoute) {
+      console.log('🔍 DEBUG AI Analysis - BLOCKED: Not pro and not dev route');
       return NextResponse.json(
         { success: false, error: 'Pro subscription required for AI analysis features' } as APIResponse,
         { status: 403 }

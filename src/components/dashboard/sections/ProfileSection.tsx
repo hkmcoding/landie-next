@@ -20,7 +20,10 @@ const profileSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
   headline: z.string().min(5, "Headline must be at least 5 characters"),
   subheadline: z.string().min(10, "Subheadline must be at least 10 characters"),
-  contact_email: z.string().email("Must be a valid email"),
+  contact_email: z.string().optional().refine(
+    (val) => !val || z.string().email().safeParse(val).success,
+    "Must be a valid email"
+  ),
 })
 
 type ProfileFormData = z.infer<typeof profileSchema>
@@ -120,14 +123,17 @@ export function ProfileSection({ landingPage, onUpdate }: ProfileSectionProps) {
             {profileImage && (
               <div className="flex items-center gap-4">
                 {profileImage ? (
-                  <Image
-                    src={profileImage}
-                    alt="Current profile"
-                    width={80}
-                    height={80}
-                    loading="lazy"
-                    className="rounded-full border"
-                  />
+                  <div className="w-[80px] h-[80px] rounded-full border overflow-hidden bg-white flex-shrink-0">
+                    <Image
+                      src={profileImage}
+                      alt="Current profile"
+                      width={80}
+                      height={80}
+                      loading="lazy"
+                      className="w-[80px] h-[80px] object-cover"
+                      style={{ width: '80px', height: '80px' }}
+                    />
+                  </div>
                 ) : (
                   <ImageFallback size={80} rounded="full" className="border" />
                 )}
@@ -236,6 +242,7 @@ export function ProfileSection({ landingPage, onUpdate }: ProfileSectionProps) {
               label="Contact Email"
               type="email"
               placeholder="sarah@sarahfitness.com"
+              description="Optional: If provided, visitors will see a 'Contact Me' form on your landing page"
               {...form.register("contact_email")}
               error={form.formState.errors.contact_email?.message}
             />

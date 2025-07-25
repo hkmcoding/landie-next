@@ -11,6 +11,16 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+// Mock useProStatus hook
+vi.mock('@/hooks/useProStatus', () => ({
+  useProStatus: () => ({
+    plan: 'free',
+    expiresAt: null,
+    isTrialActive: false,
+    trialEndsAt: null,
+  }),
+}));
+
 // Mock shadcn/ui components
 vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: any) => <div data-testid="tooltip">{children}</div>,
@@ -23,6 +33,7 @@ describe('DashboardLayout Navigation Hydration Safety', () => {
   const defaultProps = {
     activeSection: 'profile' as const,
     onSectionChange: vi.fn(),
+    authEmail: 'auth@user.com',
     userInfo: {
       name: 'Test User',
       email: 'test@example.com',
@@ -58,17 +69,25 @@ describe('DashboardLayout Navigation Hydration Safety', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('maintains consistent outer wrapper for all navigation items', () => {
-    // Test that all navigation items are wrapped in <div> regardless of disabled state
+  it('maintains consistent navigation item structure', () => {
+    // Test that navigation items are rendered consistently
     const { container } = render(<DashboardLayout {...defaultProps} isPro={false} />);
     
-    // All navigation items should be wrapped in div containers
-    const navItems = container.querySelectorAll('nav .space-y-1 > div');
-    expect(navItems.length).toBeGreaterThan(0);
+    // Navigation items should be buttons and/or anchor elements
+    const navButtons = container.querySelectorAll('nav .space-y-1 > button');
+    const navAnchors = container.querySelectorAll('nav .space-y-1 > a');
+    const totalNavItems = navButtons.length + navAnchors.length;
     
-    // Each nav item should have a div as the direct child
-    navItems.forEach((item) => {
-      expect(item.tagName).toBe('DIV');
+    expect(totalNavItems).toBeGreaterThan(0);
+    
+    // Each nav button should be a BUTTON element
+    navButtons.forEach((item) => {
+      expect(item.tagName).toBe('BUTTON');
+    });
+    
+    // Each nav anchor should be an A element
+    navAnchors.forEach((item) => {
+      expect(item.tagName).toBe('A');
     });
   });
 
@@ -85,9 +104,9 @@ describe('DashboardLayout Navigation Hydration Safety', () => {
       <DashboardLayout {...defaultProps} isPro={true} />
     );
     
-    // Both should have same outer structure (div wrappers)
-    const nonProNavItems = nonProContainer.querySelectorAll('nav .space-y-1 > div');
-    const proNavItems = proContainer.querySelectorAll('nav .space-y-1 > div');
+    // Both should have same number of navigation items
+    const nonProNavItems = nonProContainer.querySelectorAll('nav .space-y-1 > button, nav .space-y-1 > a');
+    const proNavItems = proContainer.querySelectorAll('nav .space-y-1 > button, nav .space-y-1 > a');
     
     expect(nonProNavItems.length).toBe(proNavItems.length);
     expect(consoleErrorSpy).not.toHaveBeenCalled();
@@ -97,33 +116,47 @@ describe('DashboardLayout Navigation Hydration Safety', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('View Landing Page button renders as stable button element', () => {
+  it('View Landing Page link renders conditionally based on username', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     
-    // Test with username (enabled state)
+    // Test with username (shows link)
     const { container: withUsername, unmount: unmountWithUsername } = render(
-      <DashboardLayout {...defaultProps} username="test-user" />
+      <DashboardLayout {...defaultProps} userInfo={{ ...defaultProps.userInfo, username: "test-user" }} />
     );
     
-    // Test without username (disabled state)
-    const { container: withoutUsername, unmount: unmountWithoutUsername } = render(
-      <DashboardLayout {...defaultProps} username="" />
+    // Test without username (no link)
+    const { container: withoutUsername, unmount: unmountWithUnset } = render(
+      <DashboardLayout {...defaultProps} userInfo={{ ...defaultProps.userInfo, username: undefined }} />
     );
     
-    // Both should render as button elements (not div/other elements)
-    const enabledButton = withUsername.querySelector('button:not([disabled])');
-    const disabledButton = withoutUsername.querySelector('button[disabled]');
+    // With username should render the landing page link
+    const enabledLink = withUsername.querySelector('a[href="/test-user"]');
+    expect(enabledLink).toBeTruthy();
+    expect(enabledLink?.tagName).toBe('A');
     
-    expect(enabledButton).toBeTruthy();
-    expect(disabledButton).toBeTruthy();
-    expect(enabledButton?.tagName).toBe('BUTTON');
-    expect(disabledButton?.tagName).toBe('BUTTON');
+    // Without username should not render the landing page link
+    const disabledLink = withoutUsername.querySelector('a[href="/test-user"]');
+    expect(disabledLink).toBeFalsy();
     
     // No hydration errors
     expect(consoleErrorSpy).not.toHaveBeenCalled();
     
     unmountWithUsername();
-    unmountWithoutUsername();
+    unmountWithUnset();
     consoleErrorSpy.mockRestore();
+  });
+
+  it('shows auth email in sidebar', () => {
+    const { getByText, queryByText } = render(
+      <DashboardLayout
+        {...defaultProps}
+        authEmail="real@user.com"
+        userInfo={{ name: 'Jane Coach', email: 'contact@different.com' }}
+      />
+    );
+    
+    expect(getByText('real@user.com')).toBeInTheDocument();
+    expect(queryByText('contact@different.com')).not.toBeInTheDocument();
+    expect(queryByText('user@example.com')).not.toBeInTheDocument();
   });
 });

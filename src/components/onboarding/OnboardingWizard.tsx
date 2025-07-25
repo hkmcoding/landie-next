@@ -137,14 +137,36 @@ export default function OnboardingWizard({ userId, onComplete, devMode = false }
       if (type === 'bio' && typeof response.suggestion === 'string') {
         updateData({ bio: response.suggestion });
       } else if (type === 'services' && Array.isArray(response.suggestion)) {
+        // Merge AI suggestions with existing user input, preserving user content
+        const mergedServices = response.suggestion.slice(0, data.servicesCount).map((aiService, index) => {
+          const existingService = data.services[index];
+          return {
+            title: existingService?.title?.trim() || aiService.title,
+            description: existingService?.description?.trim() || aiService.description
+          };
+        });
+        // Ensure we maintain the user's selected count
+        while (mergedServices.length < data.servicesCount) {
+          mergedServices.push({ title: '', description: '' });
+        }
         updateData({ 
-          services: response.suggestion,
-          servicesCount: response.suggestion.length 
+          services: mergedServices
         });
       } else if (type === 'highlights' && Array.isArray(response.suggestion)) {
+        // Merge AI suggestions with existing user input, preserving user content
+        const mergedHighlights = response.suggestion.slice(0, data.highlightsCount).map((aiHighlight, index) => {
+          const existingHighlight = data.highlights[index];
+          return {
+            title: existingHighlight?.title?.trim() || aiHighlight.title,
+            description: existingHighlight?.description?.trim() || aiHighlight.description
+          };
+        });
+        // Ensure we maintain the user's selected count
+        while (mergedHighlights.length < data.highlightsCount) {
+          mergedHighlights.push({ title: '', description: '' });
+        }
         updateData({ 
-          highlights: response.suggestion,
-          highlightsCount: response.suggestion.length 
+          highlights: mergedHighlights
         });
       }
       
@@ -225,7 +247,7 @@ export default function OnboardingWizard({ userId, onComplete, devMode = false }
     <div className="max-w-2xl mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Progress Bar */}
       <div className="space-y-2">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
           <div className="flex items-center gap-3">
             <h1 className="heading-3">Welcome to Landie</h1>
             {devMode && (
@@ -322,7 +344,7 @@ export default function OnboardingWizard({ userId, onComplete, devMode = false }
       </Card>
 
       {/* Navigation */}
-      <div className="flex justify-between gap-4">
+      <div className="flex justify-between gap-4 pt-4 md:pt-6">
         <Button
           variant="outline"
           onClick={handleBack}
@@ -469,7 +491,7 @@ function Step2({
           rows={4}
           required
         />
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
           <p className="text-description">This is your main introduction to visitors</p>
           <AiButton
             type="bio"
@@ -557,13 +579,18 @@ function Step3({
         </div>
       ))}
       
-      <div className="flex justify-end pt-4">
-        <AiButton
-          type="services"
-          onGenerate={onAiGenerate}
-          loading={aiLoading.services}
-          used={aiUsed.services}
-        />
+      <div className="space-y-2 pt-4">
+        <p className="text-sm text-muted-foreground text-right">
+          💡 <strong>Tip:</strong> Fill out service titles first for better AI generation results
+        </p>
+        <div className="flex justify-end">
+          <AiButton
+            type="services"
+            onGenerate={onAiGenerate}
+            loading={aiLoading.services}
+            used={aiUsed.services}
+          />
+        </div>
       </div>
     </div>
   );
@@ -643,13 +670,18 @@ function Step4({
         </div>
       ))}
       
-      <div className="flex justify-end pt-4">
-        <AiButton
-          type="highlights"
-          onGenerate={onAiGenerate}
-          loading={aiLoading.highlights}
-          used={aiUsed.highlights}
-        />
+      <div className="space-y-2 pt-4">
+        <p className="text-sm text-muted-foreground text-right">
+          💡 <strong>Tip:</strong> Fill out highlight titles first for better AI generation results
+        </p>
+        <div className="flex justify-end">
+          <AiButton
+            type="highlights"
+            onGenerate={onAiGenerate}
+            loading={aiLoading.highlights}
+            used={aiUsed.highlights}
+          />
+        </div>
       </div>
     </div>
   );

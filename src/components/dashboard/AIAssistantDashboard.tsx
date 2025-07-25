@@ -282,7 +282,8 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
       <div className="space-y-6">
         {/* Welcome Header */}
         <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
-          <div className="flex items-start justify-between">
+          {/* Desktop/Tablet Layout */}
+          <div className="hidden sm:flex items-start justify-between">
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Brain className="w-6 h-6 text-blue-600" />
@@ -313,6 +314,43 @@ export function AIAssistantDashboard({ landingPageId, userName }: AIAssistantDas
               </Button>
               {lastAnalysisTime && (
                 <p className="caption text-blue-600">
+                  Last analysis: {new Date(lastAnalysisTime).toLocaleString()}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile Layout */}
+          <div className="sm:hidden space-y-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <h1 className="heading-2 text-blue-900">Hi, {userName}</h1>
+              </div>
+              <p className="paragraph text-blue-700">
+                Your AI Assistant is ready to help optimize your landing page performance.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={() => runAIAnalysis('full')}
+                disabled={isAnalyzing || !canRunAnalysis}
+                className="bg-blue-600 hover:bg-blue-700 w-full"
+                title={!canRunAnalysis ? "Complete or dismiss pending suggestions first" : ""}
+              >
+                {isAnalyzing ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    {!canRunAnalysis ? "Complete suggestions first" : "Run AI Analysis"}
+                  </>
+                )}
+              </Button>
+              {lastAnalysisTime && (
+                <p className="caption text-blue-600 text-center">
                   Last analysis: {new Date(lastAnalysisTime).toLocaleString()}
                 </p>
               )}

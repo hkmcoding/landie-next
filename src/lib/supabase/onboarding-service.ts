@@ -107,9 +107,18 @@ export class OnboardingService {
       }
 
       // Mark onboarding as completed in the landing page
+      // Map only the fields that exist in the landing_pages table schema
       await this.dashboardService.updateLandingPage(userId, {
-        ...data,
-        // You might want to add an onboarding_completed flag to the schema
+        name: data.name,
+        username: data.username,
+        headline: data.headline,
+        subheadline: data.subheadline,
+        bio: data.bio,
+        contact_email: data.contactEmail,
+        show_contact_form: data.wantsContactForm,
+        cta_text: data.ctaText,
+        cta_url: data.ctaUrl,
+        onboarding_data: data, // Store full onboarding data in JSONB column
       });
 
     } catch (error) {

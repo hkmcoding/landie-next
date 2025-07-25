@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useSupabase } from "@/lib/supabase/auth-provider";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,6 @@ import { Button } from "@/components/ui/button";
 
 const SignUpSchema = z
   .object({
-    username: z.string().min(2, { message: "Username must be at least 2 characters." }),
     email: z.string().email({ message: "Please enter a valid email address." }),
     password: z.string().min(8, { message: "Password must be at least 8 characters." }),
     confirmPassword: z.string(),
@@ -26,13 +26,14 @@ type SignUpValues = z.infer<typeof SignUpSchema>;
 
 export default function SignUpPage() {
   const supabase = useSupabase();
+  const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const form = useForm<SignUpValues>({
     resolver: zodResolver(SignUpSchema),
-    defaultValues: { username: "", email: "", password: "", confirmPassword: "" },
+    defaultValues: { email: "", password: "", confirmPassword: "" },
   });
 
   async function onSubmit(values: SignUpValues) {
@@ -42,17 +43,14 @@ export default function SignUpPage() {
     const { error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
-      options: {
-        data: { username: values.username },
-      },
     });
     setLoading(false);
     if (error) {
       setFormError(error.message);
     } else {
-      setFormSuccess("Check your email to confirm your account.");
-      // Optionally, redirect after a delay
-      // setTimeout(() => router.push("/login"), 2000);
+      setFormSuccess("Account created successfully! Redirecting...");
+      // Redirect to dashboard (which will redirect to onboarding if needed)
+      setTimeout(() => router.push("/dashboard"), 1500);
     }
   }
 
@@ -62,19 +60,6 @@ export default function SignUpPage() {
         <h1 className="heading-2 mb-6 text-center">Sign Up</h1>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Username</FormLabel>
-                  <FormControl>
-                    <Input type="text" autoComplete="username" placeholder="Your username" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <FormField
               control={form.control}
               name="email"

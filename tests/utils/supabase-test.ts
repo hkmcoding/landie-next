@@ -143,3 +143,61 @@ export function generateTestEmail(prefix = 'test'): string {
 export function generateTestPassword(): string {
   return `TestPass${Date.now()}!`
 }
+
+/**
+ * Creates a test landing page for a user
+ */
+export async function createTestLandingPage(userId: string, username: string): Promise<any> {
+  const { data, error } = await testSupabase
+    .from('landing_pages')
+    .insert({
+      user_id: userId,
+      username: username,
+      name: 'Test User',
+      headline: 'Test Headline',
+      bio: 'Test bio for testing purposes',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .select()
+    .single()
+  
+  if (error) {
+    throw new Error(`Failed to create test landing page: ${error.message}`)
+  }
+  
+  return data
+}
+
+/**
+ * Enhanced createTestUser with optional landing page creation
+ */
+export async function createTestUserWithLandingPage(
+  email: string,
+  password: string,
+  username: string,
+  createLandingPage: boolean = false
+): Promise<TestUser & { landingPageId?: string }> {
+  // First create the user
+  const user = await createTestUser(email, password, { username })
+  
+  let landingPageId: string | undefined
+  
+  // Optionally create a landing page
+  if (createLandingPage) {
+    try {
+      const landingPage = await createTestLandingPage(user.id, username)
+      landingPageId = landingPage.id
+    } catch (error) {
+      console.warn('Failed to create landing page for test user:', error)
+      // Clean up the user if landing page creation fails
+      await cleanupTestUser(user.id)
+      throw error
+    }
+  }
+  
+  return {
+    ...user,
+    landingPageId
+  }
+}

@@ -137,6 +137,7 @@ export default function DevDashboard() {
     <DashboardLayout
       activeSection={activeSection}
       onSectionChange={setActiveSection}
+      authEmail="dev@example.com"
       userInfo={{
         name: dashboardData?.landingPage?.name || undefined,
         email: dashboardData?.landingPage?.contact_email || undefined,

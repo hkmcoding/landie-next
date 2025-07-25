@@ -397,7 +397,7 @@ Return JSON format:
 {
   "suggestions": [
     {
-      "suggestion_type": "content|conversion|engagement",
+      "suggestion_type": "content",
       "title": "Brief, clear action (must be copy/content only)",
       "description": "What text to change or content to add (max 100 words)",
       "reasoning": "Why this copy change helps conversion (max 50 words)",
@@ -408,6 +408,13 @@ Return JSON format:
     }
   ]
 }
+
+VALID suggestion_type values (choose ONE per suggestion):
+- "content": Text/copy improvements
+- "conversion": CTA and conversion optimization
+- "engagement": User engagement improvements
+- "seo": SEO content optimization
+- "performance": Content performance enhancements
 
 REMEMBER: Generate diverse, high-quality suggestions - the best 3 will be automatically selected.`;
   }
@@ -482,14 +489,34 @@ Focus on highest impact optimizations.`;
   private async saveSuggestions(suggestions: Omit<AISuggestion, 'id' | 'created_at' | 'updated_at'>[], supabase: any): Promise<AISuggestion[]> {
     if (suggestions.length === 0) return [];
 
-    const { data, error } = await supabase
-      .from('ai_suggestions')
-      .insert(suggestions.map(s => ({
+    // Validate and normalize suggestion_type values
+    const validSuggestionTypes = ['performance', 'content', 'conversion', 'engagement', 'seo'];
+    const normalizedSuggestions = suggestions.map(s => {
+      let suggestionType = s.suggestion_type;
+      
+      // Handle pipe-separated values by taking the first valid one
+      if (suggestionType && suggestionType.includes('|')) {
+        const types = suggestionType.split('|');
+        suggestionType = types.find(type => validSuggestionTypes.includes(type.trim())) || 'content';
+      }
+      
+      // Ensure suggestion_type is valid, default to 'content' if not
+      if (!validSuggestionTypes.includes(suggestionType)) {
+        suggestionType = 'content';
+      }
+      
+      return {
         ...s,
+        suggestion_type: suggestionType,
         ai_model: 'gpt-4o-mini',
         ai_prompt_version: 'v1.0',
         status: 'pending'
-      })))
+      };
+    });
+
+    const { data, error } = await supabase
+      .from('ai_suggestions')
+      .insert(normalizedSuggestions)
       .select('*');
 
     if (error) {

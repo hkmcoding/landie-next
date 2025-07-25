@@ -130,6 +130,7 @@ export interface UpdateLandingPageInput {
   tiktok_url?: string;
   contact_email?: string;
   show_contact_form?: boolean;
+  onboarding_data?: Record<string, unknown>;
 }
 
 export type DashboardSection = 'profile' | 'services' | 'highlights' | 'testimonials' | 'social' | 'cta' | 'about' | 'analytics';

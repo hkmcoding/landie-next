@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { DashboardService } from '@/lib/supabase/dashboard-service';
+import { redirect } from 'next/navigation';
 import Dashboard from './Dashboard';
 
 export default async function DashboardPage() {
@@ -7,8 +8,18 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    console.log('no user')
-    return null;
+    redirect('/login');
+  }
+
+  // Check if user has completed onboarding (has a landing page)
+  const { data: landingPage } = await supabase
+    .from('landing_pages')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (!landingPage) {
+    redirect('/onboarding');
   }
 
   // Single server-side fetch for all dashboard data
@@ -16,7 +27,12 @@ export default async function DashboardPage() {
   
   try {
     const dashboardData = await dashboardService.getDashboardData(user.id);
-    return <Dashboard initialData={dashboardData} />;
+    // Always use the auth email, never fall back to placeholder text
+    const authEmail = user.email || 'Email not available';
+    console.log('🔍 DEBUG: Auth user email:', user.email);
+    console.log('🔍 DEBUG: Auth email being passed:', authEmail);
+    console.log('🔍 DEBUG: Landing page contact_email:', dashboardData.landingPage?.contact_email);
+    return <Dashboard initialData={dashboardData} authEmail={authEmail} />;
   } catch (error) {
     console.error('Dashboard data error:', error);
     return null;

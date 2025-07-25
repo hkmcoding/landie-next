@@ -8,6 +8,7 @@ type AiType = typeof VALID_TYPES[number];
 interface AiRequestBody {
   userId: string;
   onboarding: OnboardingData;
+  count?: number;
 }
 
 interface AiSuggestion {
@@ -18,7 +19,7 @@ interface AiSuggestion {
 }
 
 // Mock suggestions for when OpenAI is not available
-const getMockSuggestion = (type: AiType, onboardingData: OnboardingData) => {
+const getMockSuggestion = (type: AiType, onboardingData: OnboardingData, count?: number) => {
   const additionalInfo = onboardingData.additionalInfo || '';
   const name = onboardingData.name || 'Professional';
   
@@ -27,7 +28,7 @@ const getMockSuggestion = (type: AiType, onboardingData: OnboardingData) => {
       return `I'm a Certified Strength Coach with 10+ years of experience helping clients achieve their fitness goals. I'm passionate about creating personalized training programs that focus on sustainable lifestyle changes. ${additionalInfo ? `I specialize in ${additionalInfo.toLowerCase()}.` : ''} I'm ready to help you transform your health and build lasting habits.`;
     
     case 'services':
-      return [
+      const serviceOptions = [
         {
           title: '1-on-1 Personal Training',
           description: 'Customized workout sessions designed specifically for your goals, fitness level, and schedule. Includes form correction, progressive programming, and ongoing support.'
@@ -37,44 +38,68 @@ const getMockSuggestion = (type: AiType, onboardingData: OnboardingData) => {
           description: 'Comprehensive nutrition guidance with meal planning, macro tracking, and sustainable eating strategies that fit your lifestyle and preferences.'
         },
         {
-          title: 'Group Fitness Classes',
-          description: 'High-energy group sessions combining strength training and cardio in a motivating, community-focused environment. All fitness levels welcome.'
+          title: 'Group Training Sessions',
+          description: 'Small group training sessions that combine personalized attention with the motivation of working out with others. Cost-effective and community-focused.'
         }
       ];
+      return serviceOptions.slice(0, count || 3);
     
     case 'highlights':
-      return [
+      const highlightOptions = [
         {
-          title: 'NASM Certified Personal Trainer',
-          description: 'National Academy of Sports Medicine certified with continuing education in corrective exercise and performance enhancement.'
+          title: 'Years of Experience',
+          description: 'Extensive experience helping clients achieve their fitness goals through personalized training and coaching approaches.'
         },
         {
-          title: '500+ Client Transformations',
-          description: 'Successfully helped over 500 clients achieve their fitness goals, from weight loss to strength building and athletic performance.'
+          title: 'Client Success Stories',
+          description: 'Successfully guided numerous clients through their fitness transformations, from weight loss to strength building and athletic performance.'
         },
         {
-          title: 'Nutrition Specialist Certification',
-          description: 'Advanced certification in sports nutrition and dietary coaching, enabling comprehensive wellness support beyond just exercise.'
+          title: 'Specialized Training Approach',
+          description: 'Developed personalized training methodologies that focus on sustainable lifestyle changes and long-term results.'
         }
       ];
+      return highlightOptions.slice(0, count || 3);
     
     default:
       return 'Professional fitness expert ready to help you achieve your goals.';
   }
 };
 
-const generateOpenAISuggestion = async (type: AiType, onboardingData: OnboardingData) => {
+const generateOpenAISuggestion = async (type: AiType, onboardingData: OnboardingData, count?: number) => {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     console.log('OpenAI API key not found, using mock suggestion');
-    return getMockSuggestion(type, onboardingData);
+    return getMockSuggestion(type, onboardingData, count);
   }
 
-  const { name, additionalInfo, headline, subheadline } = onboardingData;
-  const context = `Name: ${name || 'Not provided'}
+  const { name, additionalInfo, headline, subheadline, services, highlights } = onboardingData;
+  
+  let context = `Name: ${name || 'Not provided'}
 Headline: ${headline || 'Not provided'}
 Subheadline: ${subheadline || 'Not provided'}
 Additional Info: ${additionalInfo || 'Not provided'}`;
+
+  // Add existing services/highlights context for better AI generation
+  if (type === 'services' && services?.length > 0) {
+    const existingServices = services
+      .filter(s => s.title.trim() || s.description.trim())
+      .map((s, i) => `Service ${i + 1}: ${s.title || '[No title]'} - ${s.description || '[No description]'}`)
+      .join('\n');
+    if (existingServices) {
+      context += `\n\nExisting Services Input:\n${existingServices}`;
+    }
+  }
+  
+  if (type === 'highlights' && highlights?.length > 0) {
+    const existingHighlights = highlights
+      .filter(h => h.title.trim() || h.description.trim())
+      .map((h, i) => `Highlight ${i + 1}: ${h.title || '[No title]'} - ${h.description || '[No description]'}`)
+      .join('\n');
+    if (existingHighlights) {
+      context += `\n\nExisting Highlights Input:\n${existingHighlights}`;
+    }
+  }
 
   let prompt = '';
   let responseFormat = '';
@@ -89,19 +114,41 @@ Write a compelling 2-3 sentence bio in first person that highlights their expert
       break;
 
     case 'services':
-      prompt = `Create 3 fitness services for a trainer based on this information:
+      const serviceCount = count || 3;
+      const hasExistingServices = services?.some(s => s.title.trim() || s.description.trim());
+      
+      if (hasExistingServices) {
+        prompt = `Improve and complete ${serviceCount} fitness service${serviceCount > 1 ? 's' : ''} for a trainer based on this information:
 ${context}
 
-Generate 3 distinct fitness services they might offer. Each service should have a title and description. Focus on different aspects like personal training, group classes, nutrition, etc.`;
-      responseFormat = 'Return a JSON array with objects containing "title" and "description" fields only. No additional text or formatting.';
+IMPORTANT: Use the existing services input as a foundation. For services with titles but no descriptions, keep the EXACT same title and write compelling descriptions that directly relate to and explain that specific service. For services with partial information, enhance and improve them while keeping existing content. If creating new services, make them complement the existing ones. Focus on different aspects like personal training, group classes, nutrition, etc. Base everything on the provided information and avoid making up specific credentials not mentioned.`;
+      } else {
+        prompt = `Create ${serviceCount} fitness service${serviceCount > 1 ? 's' : ''} for a trainer based on this information:
+${context}
+
+Generate ${serviceCount} distinct fitness service${serviceCount > 1 ? 's' : ''} they might offer. Each service should have a title and description. Focus on different aspects like personal training, group classes, nutrition, etc. Base the services on the provided information and avoid making up specific credentials not mentioned.`;
+      }
+      
+      responseFormat = `Return a JSON array with exactly ${serviceCount} object${serviceCount > 1 ? 's' : ''} containing "title" and "description" fields only. No additional text or formatting.`;
       break;
 
     case 'highlights':
-      prompt = `Create 3 professional highlights for a fitness trainer based on this information:
+      const highlightCount = count || 3;
+      const hasExistingHighlights = highlights?.some(h => h.title.trim() || h.description.trim());
+      
+      if (hasExistingHighlights) {
+        prompt = `Improve and complete ${highlightCount} professional highlight${highlightCount > 1 ? 's' : ''} for a fitness trainer based on this information:
 ${context}
 
-Generate 3 key achievements, certifications,或 credentials that would build credibility. Focus on certifications, experience, specialties, or notable accomplishments.`;
-      responseFormat = 'Return a JSON array with objects containing "title" and "description" fields only. No additional text or formatting.';
+IMPORTANT: Use the existing highlights input as a foundation. For highlights with titles but no descriptions, keep the EXACT same title and write compelling descriptions that directly relate to and explain that specific title. For highlights with partial information, enhance and improve them while keeping existing content. If creating new highlights, make them complement the existing ones. Only use information provided above - do not make up specific certifications, credentials, or achievements not mentioned. Focus on experience, specialties, or accomplishments that can be inferred from the provided information.`;
+      } else {
+        prompt = `Create ${highlightCount} professional highlight${highlightCount > 1 ? 's' : ''} for a fitness trainer based on this information:
+${context}
+
+Generate ${highlightCount} key achievement${highlightCount > 1 ? 's' : ''}, experience, or credential${highlightCount > 1 ? 's' : ''} that would build credibility. Only use information provided above - do not make up specific certifications, credentials, or achievements not mentioned. Focus on general experience, specialties, or accomplishments that can be inferred from the provided information.`;
+      }
+      
+      responseFormat = `Return a JSON array with exactly ${highlightCount} object${highlightCount > 1 ? 's' : ''} containing "title" and "description" fields only. No additional text or formatting.`;
       break;
   }
 
@@ -131,7 +178,7 @@ Generate 3 key achievements, certifications,或 credentials that would build cre
 
     if (!response.ok) {
       console.error('OpenAI API error:', response.status, response.statusText);
-      return getMockSuggestion(type, onboardingData);
+      return getMockSuggestion(type, onboardingData, count);
     }
 
     const data = await response.json();
@@ -139,7 +186,7 @@ Generate 3 key achievements, certifications,或 credentials that would build cre
 
     if (!content) {
       console.error('No content in OpenAI response');
-      return getMockSuggestion(type, onboardingData);
+      return getMockSuggestion(type, onboardingData, count);
     }
 
     // For bio, return the string directly
@@ -149,26 +196,41 @@ Generate 3 key achievements, certifications,或 credentials that would build cre
 
     // For services and highlights, parse JSON
     try {
-      const parsed = JSON.parse(content);
+      // Clean up the content - remove markdown code blocks if present
+      let cleanContent = content.trim();
+      if (cleanContent.startsWith('```json')) {
+        cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanContent.startsWith('```')) {
+        cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      const parsed = JSON.parse(cleanContent);
       if (Array.isArray(parsed)) {
         return parsed;
       }
     } catch (parseError) {
       console.error('Failed to parse OpenAI JSON response:', parseError);
+      console.error('Raw content:', content);
     }
 
     // Fallback to mock if parsing fails
-    return getMockSuggestion(type, onboardingData);
+    return getMockSuggestion(type, onboardingData, count);
 
   } catch (error) {
     console.error('OpenAI API call failed:', error);
-    return getMockSuggestion(type, onboardingData);
+    return getMockSuggestion(type, onboardingData, count);
   }
 };
 
 const saveAiSuggestion = async (suggestion: AiSuggestion) => {
   try {
     const supabase = createClient();
+    
+    // Check if supabase client was created successfully
+    if (!supabase) {
+      console.error('Failed to create Supabase client');
+      return;
+    }
     
     const { error } = await supabase
       .from('ai_suggestions')
@@ -215,7 +277,7 @@ export async function POST(
       );
     }
 
-    const { userId, onboarding } = body;
+    const { userId, onboarding, count } = body;
 
     // Validate required fields
     if (!userId || !onboarding) {
@@ -226,7 +288,7 @@ export async function POST(
     }
 
     // Generate AI suggestion
-    const suggestion = await generateOpenAISuggestion(type as AiType, onboarding);
+    const suggestion = await generateOpenAISuggestion(type as AiType, onboarding, count);
 
     // Save to database only for real users (not dev users)
     if (!userId.startsWith('DEV_')) {
