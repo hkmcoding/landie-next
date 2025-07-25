@@ -3,14 +3,14 @@ export default function TypographyTestPage() {
   // Only show when SHOW_COMPONENTS is set to 'true'
   if (process.env.SHOW_COMPONENTS !== 'true') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-safe flex items-center justify-center">
         <h1 className="heading-2">Page Not Found</h1>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-8 bg-background">
+    <div className="min-h-safe p-8 bg-background">
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="text-center space-y-4">
           <h1 className="heading-1">Typography Test Page</h1>

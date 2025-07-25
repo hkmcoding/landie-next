@@ -182,8 +182,8 @@ export class WizardPageObject {
     await this.verifyCurrentStep(5)
     await expect(this.page.locator('text=How do you want people to contact you?')).toBeVisible()
     
-    // Contact form section - find the container with "Contact Form" heading
-    const contactFormSection = this.page.locator('h4:has-text("Contact Form")').locator('..')
+    // Contact form section - find the container with "Contact Me" heading
+    const contactFormSection = this.page.locator('h4:has-text("Contact Me")').locator('..')
     if (data.wantsContactForm) {
       await contactFormSection.getByRole('button', { name: 'Yes' }).click()
       

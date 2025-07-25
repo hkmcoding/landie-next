@@ -695,11 +695,11 @@ function Step5({ data, updateData }: { data: OnboardingData; updateData: (update
         Choose how you want visitors to contact you and take action on your landing page.
       </p>
       
-      {/* Contact Form */}
+      {/* Contact Me */}
       <div className="space-y-4 p-4 border rounded-lg">
-        <h4 className="subtitle-4">Contact Form</h4>
+        <h4 className="subtitle-4">Contact Me</h4>
         <p className="paragraph text-muted-foreground">
-          A contact form allows visitors to send you messages directly through your landing page.
+          A contact me section allows visitors to send you emails to a contact email you provide.
         </p>
         
         <div className="flex gap-4">

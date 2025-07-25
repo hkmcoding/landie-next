@@ -35,6 +35,8 @@ export default function RootLayout({
             {children}
           </ConditionalLayout>
         </AuthProvider>
+        {/* Scroll sentinel for iOS Safari debugging */}
+        <div id="scroll-sentinel" style={{height: '20px', background: 'red', position: 'relative', zIndex: 9999}} />
       </body>
     </html>
   );

@@ -25,7 +25,7 @@ export default function OnboardingDevPage() {
 
   if (showWizard) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-safe bg-background">
         <OnboardingWizard
           userId={mockUserId}
           onComplete={handleComplete}
@@ -36,7 +36,7 @@ export default function OnboardingDevPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-safe bg-background">
       <div className="max-w-4xl mx-auto p-6 space-y-6">
         <Card>
           <CardHeader>
@@ -78,7 +78,7 @@ export default function OnboardingDevPage() {
                     <div><strong>Bio:</strong> {completedData.bio}</div>
                     <div><strong>Services:</strong> {completedData.servicesCount} configured</div>
                     <div><strong>Highlights:</strong> {completedData.highlightsCount} configured</div>
-                    <div><strong>Contact Form:</strong> {completedData.wantsContactForm ? 'Yes' : 'No'}</div>
+                    <div><strong>Contact Me:</strong> {completedData.wantsContactForm ? 'Yes' : 'No'}</div>
                     <div><strong>CTA Button:</strong> {completedData.wantsCTAButton ? 'Yes' : 'No'}</div>
                     {completedData.wantsCTAButton && (
                       <>

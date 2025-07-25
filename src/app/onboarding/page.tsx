@@ -21,7 +21,7 @@ export default function OnboardingPage() {
   // Show loading state while checking auth
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-safe bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="mt-2 text-muted-foreground">Loading...</p>
@@ -33,7 +33,7 @@ export default function OnboardingPage() {
   // Redirect to login if not authenticated
   if (!user) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-safe bg-background flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Authentication Required</CardTitle>
@@ -55,7 +55,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-safe bg-background">
       <OnboardingWizard
         userId={user.id}
         onComplete={handleOnboardingComplete}

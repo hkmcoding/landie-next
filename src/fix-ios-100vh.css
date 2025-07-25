@@ -1,0 +1,106 @@
+/* iOS Safari 100vh Fix - Mobile Viewport Units Utility */
+:root {
+  --safe-vh: 100vh;
+  --safe-svh: 100vh; /* small viewport height fallback */
+  --safe-lvh: 100vh; /* large viewport height fallback */
+  --safe-dvh: 100vh; /* dynamic viewport height fallback */
+}
+
+/* Use dynamic viewport height when supported (iOS 15.4+, Chrome 108+) */
+@supports (height: 100dvh) {
+  :root { 
+    --safe-vh: 100dvh;
+    --safe-dvh: 100dvh;
+  }
+}
+
+/* Use small viewport height when supported */
+@supports (height: 100svh) {
+  :root { 
+    --safe-svh: 100svh;
+  }
+}
+
+/* Use large viewport height when supported */
+@supports (height: 100lvh) {
+  :root { 
+    --safe-lvh: 100lvh;
+  }
+}
+
+/* Safe viewport utilities */
+.h-safe { 
+  height: var(--safe-vh); 
+}
+
+.min-h-safe { 
+  min-height: var(--safe-vh); 
+}
+
+.max-h-safe { 
+  max-height: var(--safe-vh); 
+}
+
+/* Small viewport utilities (for collapsed browser UI) */
+.h-safe-small { 
+  height: var(--safe-svh); 
+}
+
+.min-h-safe-small { 
+  min-height: var(--safe-svh); 
+}
+
+/* Large viewport utilities (for expanded browser UI) */
+.h-safe-large { 
+  height: var(--safe-lvh); 
+}
+
+.min-h-safe-large { 
+  min-height: var(--safe-lvh); 
+}
+
+/* Dynamic viewport utilities (best for hero sections) */
+.h-safe-dynamic { 
+  height: var(--safe-dvh); 
+}
+
+.min-h-safe-dynamic { 
+  min-height: var(--safe-dvh); 
+}
+
+/* Ensure proper scrolling behavior on iOS */
+@supports (-webkit-touch-callout: none) {
+  body {
+    /* Enable momentum scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent overscroll bounce at document level */
+    overscroll-behavior-y: none;
+  }
+  
+  /* Fix for iOS Safari where fixed elements can interfere with scrolling */
+  .ios-scroll-fix {
+    /* Isolate scrolling context */
+    isolation: isolate;
+    /* Create new stacking context */
+    position: relative;
+    z-index: 0;
+  }
+}
+
+/* Debugging utility - can be removed in production */
+.scroll-debug {
+  position: relative;
+}
+
+.scroll-debug::after {
+  content: 'vh: ' attr(data-vh) ' dvh: ' attr(data-dvh);
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  font-size: 12px;
+  z-index: 10000;
+  pointer-events: none;
+}

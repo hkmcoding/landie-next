@@ -49,7 +49,7 @@ export default function DevAnalytics() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-safe">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="text-description">Loading dev analytics...</p>
@@ -60,7 +60,7 @@ export default function DevAnalytics() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-safe">
         <div className="text-center">
           <p className="text-error">{error}</p>
         </div>
@@ -70,7 +70,7 @@ export default function DevAnalytics() {
 
   if (!dashboardData) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-safe">
         <div className="text-center">
           <p className="text-description">No dashboard data available</p>
         </div>
@@ -79,7 +79,7 @@ export default function DevAnalytics() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-safe bg-background p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium mb-4">

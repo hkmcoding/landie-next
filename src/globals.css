@@ -1,6 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@import url('./fix-ios-100vh.css');
  
 @layer base {
   :root {

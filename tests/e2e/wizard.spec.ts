@@ -218,7 +218,7 @@ test.describe('Onboarding Wizard', () => {
     await wizardPage.verifyCurrentStep(5)
 
     // Test contact form toggling
-    const contactFormSection = page.locator('text=Contact Form').locator('..').locator('..')
+    const contactFormSection = page.locator('text=Contact Me').locator('..').locator('..')
     
     // Should start with Yes selected (default from test data)
     await contactFormSection.getByRole('button', { name: 'Yes' }).click()

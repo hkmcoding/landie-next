@@ -1,10 +1,61 @@
-# Supabase CLI (v1)
+# Landie - AI Landing Page Generator
 
-[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main)
+Landie is an AI-powered landing page generator that helps users create professional landing pages through an intuitive onboarding wizard.
 
-[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
+## Mobile Viewport Quirks
 
-This repository contains all the functionality for Supabase CLI.
+### iOS Safari 100vh Issue
+
+iOS Safari has a known issue where `100vh` doesn't account for the browser chrome (address bar, toolbar), causing content to be cut off at the bottom of the viewport. This is particularly problematic on mobile devices where the browser UI can dynamically show/hide.
+
+**Symptoms:**
+- Page stops ~100-150px short of the real bottom
+- Content becomes reachable when Safari's bars collapse
+- Affects long landing pages and dashboard tabs
+
+**Solution Implemented:**
+
+We've implemented a robust fix using modern viewport units with fallbacks:
+
+```css
+/* CSS Custom Properties with Safe Viewport Heights */
+:root {
+  --safe-vh: 100vh;           /* Fallback */
+  --safe-dvh: 100dvh;         /* Dynamic viewport height */
+  --safe-svh: 100svh;         /* Small viewport height */
+  --safe-lvh: 100lvh;         /* Large viewport height */
+}
+
+/* Utility Classes */
+.h-safe { height: var(--safe-vh); }
+.min-h-safe { min-height: var(--safe-vh); }
+.h-safe-dynamic { height: var(--safe-dvh); }
+```
+
+**Usage:**
+- Replace `h-screen` with `h-safe`
+- Replace `min-h-screen` with `min-h-safe`
+- Use `h-safe-dynamic` for hero sections that should adapt to browser chrome
+
+**Browser Support:**
+- `100dvh`: iOS 15.4+, Chrome 108+
+- `100svh`/`100lvh`: iOS 15.4+, Chrome 108+
+- Fallback to `100vh` for older browsers
+
+**Testing:**
+Run mobile viewport tests: `npm run test:mobile`
+
+### Debugging Scroll Issues
+
+A red scroll sentinel is added at the bottom of pages in development to help identify scroll issues:
+
+```html
+<div id="scroll-sentinel" style="height: 20px; background: red;"></div>
+```
+
+The sentinel should be visible when scrolling to the bottom. If it's not visible, there's likely a viewport height issue.
+
+---
 
 - [x] Running Supabase locally
 - [x] Managing database migrations

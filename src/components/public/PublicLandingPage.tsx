@@ -75,7 +75,7 @@ export function PublicLandingPage({ data }: PublicLandingPageProps) {
 
   if (!landingPage) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-safe flex items-center justify-center">
         <div className="text-center">
           <h1 className="heading-2 mb-4">Profile Not Found</h1>
           <p className="text-muted-foreground">This profile could not be found or is not available.</p>
@@ -85,7 +85,7 @@ export function PublicLandingPage({ data }: PublicLandingPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 relative">
+    <div className="min-h-safe bg-gray-100 relative">
       {/* Profile picture positioned to overlap */}
       <div className="relative z-20 pt-8 flex justify-center">
         <div className="w-[120px] h-[120px] rounded-full border-4 border-white overflow-hidden bg-white">

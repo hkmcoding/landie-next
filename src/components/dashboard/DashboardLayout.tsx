@@ -166,7 +166,7 @@ export function DashboardLayout({
 
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-safe bg-background">
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b h-16 flex items-center justify-between px-4">
         <div className="flex items-center justify-between">
