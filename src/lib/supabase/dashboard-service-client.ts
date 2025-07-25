@@ -14,6 +14,7 @@ import {
   UpdateTestimonialInput,
   UpdateLandingPageInput
 } from '@/types/dashboard';
+import { OgCacheService } from '@/lib/og/storage';
 
 export class DashboardServiceClient {
   private supabase;
@@ -97,7 +98,32 @@ export class DashboardServiceClient {
       .single();
 
     if (error) throw error;
+    
+    // Cache busting for OG images - check if fields that affect OG image are updated
+    if (data && this.shouldBustOgCache(input)) {
+      try {
+        const ogCacheService = new OgCacheService();
+        await ogCacheService.removeCachedOgImage(data.username);
+      } catch (error) {
+        // Log error but don't fail the main operation
+        console.error('Failed to bust OG cache:', error);
+      }
+    }
+    
     return data;
+  }
+
+  private shouldBustOgCache(input: UpdateLandingPageInput): boolean {
+    // Fields that affect the OG image
+    const ogFields: (keyof UpdateLandingPageInput)[] = [
+      'name',
+      'username', 
+      'profile_image_url',
+      'headline',
+      'subheadline'
+    ];
+    
+    return ogFields.some(field => input[field] !== undefined);
   }
 
   async createLandingPage(userId: string, input: Partial<LandingPage>): Promise<LandingPage | null> {

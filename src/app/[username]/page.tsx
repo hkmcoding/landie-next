@@ -20,21 +20,36 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
 
     const { landingPage } = data;
+    const name = landingPage?.name || landingPage?.username || 'Coach';
+    const title = `${name} | Landie`;
+    const description = landingPage?.subheadline || landingPage?.headline || 'Personal coaching page';
+    
+    // Determine the base URL - use environment variable or fallback
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://landie.co';
+    const ogImageUrl = `${baseUrl}/${resolvedParams.username}/opengraph-image`;
     
     return {
-      title: `${landingPage?.name || landingPage?.username} - ${landingPage?.headline || 'Professional Profile'}`,
-      description: landingPage?.subheadline || landingPage?.bio || `Professional profile for ${landingPage?.name || landingPage?.username}`,
+      title,
+      description,
       openGraph: {
-        title: `${landingPage?.name || landingPage?.username} - ${landingPage?.headline || 'Professional Profile'}`,
-        description: landingPage?.subheadline || landingPage?.bio || `Professional profile for ${landingPage?.name || landingPage?.username}`,
-        images: landingPage?.profile_image_url ? [landingPage?.profile_image_url] : [],
-        type: 'profile',
+        type: 'website',
+        title,
+        description,
+        url: `${baseUrl}/${resolvedParams.username}`,
+        images: [
+          {
+            url: ogImageUrl,
+            width: 1200,
+            height: 630,
+            alt: `${name} - Landie Profile`,
+          },
+        ],
       },
       twitter: {
         card: 'summary_large_image',
-        title: `${landingPage?.name || landingPage?.username} - ${landingPage?.headline || 'Professional Profile'}`,
-        description: landingPage?.subheadline || landingPage?.bio || `Professional profile for ${landingPage?.name || landingPage?.username}`,
-        images: landingPage?.profile_image_url ? [landingPage?.profile_image_url] : [],
+        title,
+        description,
+        images: [ogImageUrl],
       },
     };
   } catch (error) {

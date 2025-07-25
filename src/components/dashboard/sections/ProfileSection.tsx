@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Save, Loader2, Eye, ExternalLink } from "lucide-react"
+import { Save, Loader2, Eye, ExternalLink, Copy, Check, Share } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FormField } from "@/components/ui/form-field"
@@ -13,7 +13,8 @@ import { FileUpload } from "@/components/ui/file-upload"
 import { LandingPage, DashboardData, UpdateLandingPageInput } from "@/types/dashboard"
 import { DashboardServiceClient } from "@/lib/supabase/dashboard-service-client"
 import { createClient } from "@/lib/supabase/client"
-import { ImageFallback } from '@/components/ui/ImageFallback';
+import { ImageFallback } from '@/components/ui/ImageFallback'
+import { copyEmbedSnippet } from "@/lib/clipboard"
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -37,6 +38,7 @@ export function ProfileSection({ landingPage, onUpdate }: ProfileSectionProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [profileImage, setProfileImage] = useState<string | null>(landingPage?.profile_image_url || null)
   const [hasMounted, setHasMounted] = useState(false)
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copying' | 'copied'>('idle')
   
   const supabase = createClient()
   const dashboardService = new DashboardServiceClient()
@@ -93,6 +95,30 @@ export function ProfileSection({ landingPage, onUpdate }: ProfileSectionProps) {
       // TODO: Add error toast
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleCopyEmbed = async () => {
+    if (!landingPage?.username || !landingPage?.name) {
+      return // Can't copy without username and name
+    }
+
+    setCopyStatus('copying')
+    
+    try {
+      const success = await copyEmbedSnippet(landingPage.username, landingPage.name)
+      
+      if (success) {
+        setCopyStatus('copied')
+        setTimeout(() => setCopyStatus('idle'), 2000) // Reset after 2 seconds
+      } else {
+        setCopyStatus('idle')
+        // TODO: Add error toast
+      }
+    } catch (error) {
+      console.error('Error copying embed snippet:', error)
+      setCopyStatus('idle')
+      // TODO: Add error toast
     }
   }
 
@@ -269,6 +295,64 @@ export function ProfileSection({ landingPage, onUpdate }: ProfileSectionProps) {
           </form>
         </CardContent>
       </Card>
+
+      {/* Share Snippet Card */}
+      {landingPage?.username && landingPage?.name && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Share className="h-5 w-5" />
+              Share Your Profile
+            </CardTitle>
+            <CardDescription>
+              Copy this snippet to embed your rich profile preview in websites, newsletters, or social media
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 rounded-lg border">
+                <p className="text-sm text-gray-600 mb-2">Preview:</p>
+                <div className="bg-white p-3 rounded border">
+                  <img 
+                    src={`${process.env.NEXT_PUBLIC_SITE_URL || 'https://landie.co'}/${landingPage.username}/opengraph-image`}
+                    alt={`${landingPage.name} - Landie Profile`}
+                    className="w-full max-w-md rounded-lg shadow-sm"
+                    style={{ aspectRatio: '1200/630' }}
+                  />
+                </div>
+              </div>
+              
+              <Button 
+                onClick={handleCopyEmbed}
+                disabled={copyStatus === 'copying' || !landingPage?.username}
+                className="w-full sm:w-auto"
+                variant={copyStatus === 'copied' ? 'default' : 'outline'}
+              >
+                {copyStatus === 'copying' ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Copying...
+                  </>
+                ) : copyStatus === 'copied' ? (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy Share Snippet
+                  </>
+                )}
+              </Button>
+              
+              <p className="text-xs text-gray-500">
+                Paste this into your website or newsletter to show a rich preview of your Landie profile
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
