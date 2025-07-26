@@ -20,7 +20,10 @@ const MultiFileInput = React.forwardRef<HTMLInputElement, MultiFileInputProps>(
     const [selectedFiles, setSelectedFiles] = React.useState<File[]>([])
     const inputRef = React.useRef<HTMLInputElement>(null)
     
-    React.useImperativeHandle(ref, () => inputRef.current!)
+    React.useImperativeHandle(ref, () => ({
+      ...inputRef.current!,
+      clearSelectedFiles: () => setSelectedFiles([])
+    }))
 
     const handleDrag = React.useCallback((e: React.DragEvent) => {
       e.preventDefault()

@@ -17,7 +17,8 @@ import {
   LogOut,
   User,
   MoreVertical,
-  X
+  X,
+  Quote
 } from "lucide-react";
 
 export const Icons = {
@@ -40,4 +41,5 @@ export const Icons = {
   user: User,
   moreVertical: MoreVertical,
   x: X,
+  quote: Quote,
 }; 

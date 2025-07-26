@@ -11,6 +11,9 @@ import { useEffect, useRef } from 'react';
 const ServicesSection = dynamic(() => import('./ServicesSection').then(mod => ({ default: mod.ServicesSection })), {
   loading: () => <div className="py-12 px-4"><div className="animate-pulse bg-gray-100 h-32 rounded-2xl"></div></div>
 });
+const TestimonialsSection = dynamic(() => import('./TestimonialsSection').then(mod => ({ default: mod.TestimonialsSection })), {
+  loading: () => <div className="py-12 px-4"><div className="animate-pulse bg-gray-100 h-28 rounded-2xl"></div></div>
+});
 const HighlightsSection = dynamic(() => import('./HighlightsSection').then(mod => ({ default: mod.HighlightsSection })), {
   loading: () => <div className="py-12 px-4"><div className="animate-pulse bg-gray-100 h-24 rounded-2xl"></div></div>
 });
@@ -35,13 +38,14 @@ interface PublicLandingPageProps {
 }
 
 export function PublicLandingPage({ data }: PublicLandingPageProps) {
-  const { landingPage, services, highlights } = data;
+  const { landingPage, services, highlights, testimonials } = data;
   
   // Refs for section tracking
   const heroRef = useRef<HTMLDivElement>(null);
   const aboutRef = useRef<HTMLDivElement>(null);
   const highlightsRef = useRef<HTMLDivElement>(null);
   const servicesRef = useRef<HTMLDivElement>(null);
+  const testimonialsRef = useRef<HTMLDivElement>(null);
   const socialRef = useRef<HTMLDivElement>(null);
   const contactRef = useRef<HTMLDivElement>(null);
 
@@ -59,8 +63,9 @@ export function PublicLandingPage({ data }: PublicLandingPageProps) {
         { name: 'about', element: aboutRef.current, index: 1 },
         { name: 'highlights', element: highlightsRef.current, index: 2 },
         { name: 'services', element: servicesRef.current, index: 3 },
-        { name: 'social', element: socialRef.current, index: 4 },
-        { name: 'contact', element: contactRef.current, index: 5 }
+        { name: 'testimonials', element: testimonialsRef.current, index: 4 },
+        { name: 'social', element: socialRef.current, index: 5 },
+        { name: 'contact', element: contactRef.current, index: 6 }
       ].filter(section => section.element !== null) as { name: string; element: HTMLElement; index: number }[]
       
       const sectionCleanup = AnalyticsTrackerSingleton.initializeSectionTracking(landingPage.id, sections)
@@ -119,6 +124,12 @@ export function PublicLandingPage({ data }: PublicLandingPageProps) {
         {services && services.length > 0 && (
           <div ref={servicesRef}>
             <ServicesSection services={services} />
+          </div>
+        )}
+        
+        {testimonials && testimonials.length > 0 && (
+          <div ref={testimonialsRef}>
+            <TestimonialsSection testimonials={testimonials} />
           </div>
         )}
         

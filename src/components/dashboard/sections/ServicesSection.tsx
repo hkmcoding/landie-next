@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -40,8 +40,8 @@ const serviceSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
   description: z.string().min(20, "Description must be at least 20 characters"),
   price: z.string().optional(),
-  button_text: z.string().min(3, "Button text must be at least 3 characters"),
-  button_url: z.string().url("Must be a valid URL"),
+  button_text: z.string().optional(),
+  button_url: z.string().url().optional().or(z.literal("")),
   youtube_url: z.string().url().optional().or(z.literal("")),
 })
 
@@ -139,13 +139,13 @@ function SortableServiceCard({ service, onEdit, onDelete }: SortableServiceCardP
                   key={index}
                   src={imageUrl}
                   alt={`${service.title} image ${index + 1}`}
-                  width={64}
-                  height={64}
+                  width={80}
+                  height={80}
                   loading="lazy"
-                  className="rounded-md"
+                  className="w-20 h-20 object-cover rounded-md border"
                 />
               ) : (
-                <ImageFallback key={index} size={64} rounded="md" />
+                <ImageFallback key={index} size={80} rounded="md" />
               )
             ))}
           </div>
@@ -179,6 +179,8 @@ export function ServicesSection({ services, landingPageId, onUpdate }: ServicesS
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  
+  const multiFileInputRef = useRef<HTMLInputElement & { clearSelectedFiles: () => void }>(null)
   
   const supabase = createClient()
   const dashboardService = new DashboardServiceClient()
@@ -221,7 +223,7 @@ export function ServicesSection({ services, landingPageId, onUpdate }: ServicesS
       title: "",
       description: "",
       price: "",
-      button_text: "Learn More",
+      button_text: "",
       button_url: "",
       youtube_url: "",
     },
@@ -229,8 +231,17 @@ export function ServicesSection({ services, landingPageId, onUpdate }: ServicesS
 
   const handleCreateService = () => {
     setEditingService(null)
-    form.reset()
+    form.reset({
+      title: "",
+      description: "",
+      price: "",
+      button_text: "Learn More",
+      button_url: "",
+      youtube_url: "",
+    })
     setIsDialogOpen(true)
+    // Clear any previously selected files when opening create dialog
+    setTimeout(() => multiFileInputRef.current?.clearSelectedFiles(), 0)
   }
 
   const handleEditService = (service: Service) => {
@@ -239,11 +250,13 @@ export function ServicesSection({ services, landingPageId, onUpdate }: ServicesS
       title: service.title || "",
       description: service.description || "",
       price: service.price || "",
-      button_text: service.button_text || "Learn More",
+      button_text: service.button_text || "",
       button_url: service.button_url || "",
       youtube_url: service.youtube_url || "",
     })
     setIsDialogOpen(true)
+    // Clear any previously selected files when opening edit dialog
+    setTimeout(() => multiFileInputRef.current?.clearSelectedFiles(), 0)
   }
 
   const handleDeleteService = async (service: Service) => {
@@ -359,13 +372,13 @@ export function ServicesSection({ services, landingPageId, onUpdate }: ServicesS
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
-                  label="Button Text"
+                  label="Button Text (optional)"
                   placeholder="Start Training"
                   {...form.register("button_text")}
                   error={form.formState.errors.button_text?.message}
                 />
                 <FormField
-                  label="Button URL"
+                  label="Button URL (optional)"
                   placeholder="https://calendly.com/sarahfitness/consultation"
                   {...form.register("button_url")}
                   error={form.formState.errors.button_url?.message}
@@ -381,6 +394,7 @@ export function ServicesSection({ services, landingPageId, onUpdate }: ServicesS
               <div className="space-y-2">
                 <Label>Service Images</Label>
                 <MultiFileInput
+                  ref={multiFileInputRef}
                   maxFiles={5}
                   acceptedTypes="image/*"
                   maxFileSize={5}
@@ -429,6 +443,7 @@ export function ServicesSection({ services, landingPageId, onUpdate }: ServicesS
                           );
                           onUpdate({ services: updatedServices });
                           setEditingService(updatedService);
+                          multiFileInputRef.current?.clearSelectedFiles();
                         }
                       }
                     } catch (error) {
