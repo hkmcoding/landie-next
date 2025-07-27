@@ -123,13 +123,13 @@ export function PublicLandingPage({ data }: PublicLandingPageProps) {
         
         {services && services.length > 0 && (
           <div ref={servicesRef}>
-            <ServicesSection services={services} />
+            <ServicesSection services={services} landingPageId={landingPage.id} />
           </div>
         )}
         
         {testimonials && testimonials.length > 0 && (
           <div ref={testimonialsRef}>
-            <TestimonialsSection testimonials={testimonials} />
+            <TestimonialsSection testimonials={testimonials} landingPageId={landingPage.id} />
           </div>
         )}
         

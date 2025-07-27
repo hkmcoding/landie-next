@@ -6,12 +6,14 @@ import { Icons } from '@/components/icons';
 import Image from 'next/image';
 import { ImageFallback } from '@/components/ui/ImageFallback';
 import clsx from 'clsx';
+import { AnalyticsTrackerSingleton } from '@/lib/analytics-singleton';
 
 interface TestimonialsSectionProps {
   testimonials: Testimonial[];
+  landingPageId?: string;
 }
 
-export function TestimonialsSection({ testimonials }: TestimonialsSectionProps) {
+export function TestimonialsSection({ testimonials, landingPageId }: TestimonialsSectionProps) {
   if (!testimonials || testimonials.length === 0) {
     return null;
   }
@@ -27,7 +29,7 @@ export function TestimonialsSection({ testimonials }: TestimonialsSectionProps) 
 
         <div className="space-y-3 md:space-y-4">
           {testimonials.map((testimonial) => (
-            <TestimonialCard key={testimonial.id} testimonial={testimonial} />
+            <TestimonialCard key={testimonial.id} testimonial={testimonial} landingPageId={landingPageId} />
           ))}
         </div>
       </div>
@@ -35,7 +37,7 @@ export function TestimonialsSection({ testimonials }: TestimonialsSectionProps) 
   );
 }
 
-function TestimonialCard({ testimonial }: { testimonial: Testimonial }) {
+function TestimonialCard({ testimonial, landingPageId }: { testimonial: Testimonial; landingPageId?: string }) {
   const hasImages = testimonial.image_urls && testimonial.image_urls.length > 0;
   const hasYoutube = testimonial.youtube_url;
   
@@ -50,6 +52,13 @@ function TestimonialCard({ testimonial }: { testimonial: Testimonial }) {
     });
   }
 
+  // Handle click tracking
+  const handleTestimonialClick = () => {
+    if (landingPageId && hasYoutube) {
+      AnalyticsTrackerSingleton.trackCtaClick(landingPageId, 'Watch Video Testimonial', 'testimonial_card');
+    }
+  };
+
   // If there's a YouTube video, make it clickable
   const CardWrapper = ({ children }: { children: React.ReactNode }) => {
     if (hasYoutube && testimonial.youtube_url) {
@@ -59,6 +68,7 @@ function TestimonialCard({ testimonial }: { testimonial: Testimonial }) {
           target="_blank"
           rel="noopener noreferrer"
           className="block w-full"
+          onClick={handleTestimonialClick}
         >
           {children}
         </a>

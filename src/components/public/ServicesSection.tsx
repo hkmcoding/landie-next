@@ -6,12 +6,14 @@ import { Icons } from '@/components/icons';
 import Image from 'next/image';
 import { ImageFallback } from '@/components/ui/ImageFallback';
 import clsx from 'clsx';
+import { AnalyticsTrackerSingleton } from '@/lib/analytics-singleton';
 
 interface ServicesSectionProps {
   services: Service[];
+  landingPageId?: string;
 }
 
-export function ServicesSection({ services }: ServicesSectionProps) {
+export function ServicesSection({ services, landingPageId }: ServicesSectionProps) {
   if (!services || services.length === 0) {
     return null;
   }
@@ -27,7 +29,7 @@ export function ServicesSection({ services }: ServicesSectionProps) {
 
         <div className="space-y-3 md:space-y-4">
           {services.map((service) => (
-            <ServiceCard key={service.id} service={service} />
+            <ServiceCard key={service.id} service={service} landingPageId={landingPageId} />
           ))}
         </div>
       </div>
@@ -35,7 +37,7 @@ export function ServicesSection({ services }: ServicesSectionProps) {
   );
 }
 
-function ServiceCard({ service }: { service: Service }) {
+function ServiceCard({ service, landingPageId }: { service: Service; landingPageId?: string }) {
   const hasImages = service.image_urls && service.image_urls.length > 0;
   const hasYoutube = service.youtube_url;
   const hasPrice = service.price;
@@ -52,6 +54,14 @@ function ServiceCard({ service }: { service: Service }) {
     });
   }
 
+  // Handle click tracking
+  const handleServiceClick = () => {
+    if (landingPageId && primaryUrl) {
+      const ctaText = service.button_text || (hasYoutube ? 'Watch Video' : 'Learn More');
+      AnalyticsTrackerSingleton.trackCtaClick(landingPageId, ctaText, 'service_card');
+    }
+  };
+
   // If it's clickable, make the whole card a link
   const CardWrapper = ({ children }: { children: React.ReactNode }) => {
     if (primaryUrl) {
@@ -61,6 +71,7 @@ function ServiceCard({ service }: { service: Service }) {
           target="_blank"
           rel="noopener noreferrer"
           className="block w-full"
+          onClick={handleServiceClick}
         >
           {children}
         </a>

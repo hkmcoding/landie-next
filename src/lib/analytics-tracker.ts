@@ -89,6 +89,8 @@ class AnalyticsTracker {
       cta_text: ctaText,
       cta_position: ctaPosition,
       url: window.location.href,
+      referrer: document.referrer,
+      user_agent: navigator.userAgent,
       timestamp: new Date().toISOString()
     })
   }

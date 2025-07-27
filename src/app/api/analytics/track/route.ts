@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
           .schema('analytics')
           .from('cta_clicks')
           .insert({
-            id: visitor_id || crypto.randomUUID(),
+            id: crypto.randomUUID(),
             landing_page_id,
             created_at: new Date().toISOString(),
             cta_text: data?.cta_text || '',
