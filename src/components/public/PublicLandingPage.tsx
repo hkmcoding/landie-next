@@ -144,7 +144,9 @@ export function PublicLandingPage({ data }: PublicLandingPageProps) {
         <FooterSection />
         
         {/* Add bottom padding to account for sticky CTA */}
-        <div className="pb-24"></div>
+        {(landingPage.cta_text && landingPage.cta_url) && (
+          <div className="pb-24"></div>
+        )}
       </div>
       
       {/* Sticky CTA */}

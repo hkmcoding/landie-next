@@ -28,7 +28,7 @@ export function HeroSection({ landingPage, profileOnly = false }: HeroSectionPro
             width={120}
             height={120}
             priority
-            className="rounded-full object-cover"
+            className="w-full h-full rounded-full object-cover"
             sizes="120px"
           />
         )}

@@ -8,6 +8,41 @@ import { ImageFallback } from '@/components/ui/ImageFallback';
 import clsx from 'clsx';
 import { AnalyticsTrackerSingleton } from '@/lib/analytics-singleton';
 
+// Utility function to format text with bullet points
+function formatBulletPoints(text: string): React.ReactNode {
+  // If no bullet indicators, return as-is
+  if (!text.includes('•') && !text.includes(' - ')) {
+    return text;
+  }
+
+  // Replace bullet indicators with line breaks, keeping all content
+  let formatted = text
+    .replace(/•/g, '\n•') // Add line break before bullet chars
+    .replace(/\s+-\s+/g, '\n- ') // Add line break before spaced dashes
+    .trim();
+
+  // Split into lines and render
+  const lines = formatted.split('\n').filter(line => line.trim());
+  
+  return (
+    <div>
+      {lines.map((line, index) => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
+          // This is a bullet point
+          return <div key={index} className="flex items-start gap-2 mb-1">
+            <span className="text-slate-400 mt-1">•</span>
+            <span>{trimmed.replace(/^[•-]\s*/, '')}</span>
+          </div>;
+        } else {
+          // Regular text
+          return <div key={index} className="mb-1">{trimmed}</div>;
+        }
+      })}
+    </div>
+  );
+}
+
 interface ServicesSectionProps {
   services: Service[];
   landingPageId?: string;
@@ -105,9 +140,9 @@ function ServiceCard({ service, landingPageId }: { service: Service; landingPage
           </div>
           
           {service.description && (
-            <p className="paragraph text-slate-600 mb-3">
-              {service.description}
-            </p>
+            <div className="paragraph text-slate-600 mb-3">
+              {formatBulletPoints(service.description)}
+            </div>
           )}
 
           {/* Action indicator */}
