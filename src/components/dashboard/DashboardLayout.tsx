@@ -153,7 +153,7 @@ export function DashboardLayout({
   console.log('🔍 DEBUG DashboardLayout: authEmail received:', authEmail);
   
   const handleUpgrade = () => {
-    router.push('/pricing')
+    router.push('/#pricing')
   }
   
 

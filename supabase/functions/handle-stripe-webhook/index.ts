@@ -150,12 +150,12 @@ async function handleSubscriptionEvent(event: StripeWebhookEvent) {
   if (!userId) {
     // Look up user by stripe_customer_id
     const { data: proStatusRecord } = await supabase
-      .from('pro_status')
-      .select('id')
+      .from('user_pro_status')
+      .select('user_id')
       .eq('stripe_customer_id', customerId)
       .single();
     
-    userId = proStatusRecord?.id;
+    userId = proStatusRecord?.user_id;
   }
 
   if (!userId) {

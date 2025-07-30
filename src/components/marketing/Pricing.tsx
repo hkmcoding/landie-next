@@ -3,8 +3,45 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
+import { useState } from "react";
 
 export default function Pricing() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleUpgrade = async () => {
+    setIsLoading(true);
+    try {
+      // Check if user is logged in first
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        // Redirect to login with return URL
+        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname + '#pricing');
+        return;
+      }
+
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+
+      const { url } = await response.json();
+      window.location.href = url;
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Something went wrong. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
     <section id="pricing" aria-label="Simple, Transparent Pricing" className="py-16 lg:py-24 bg-background">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -26,7 +63,7 @@ export default function Pricing() {
             </div>
             <ul className="list-none space-y-2 mb-6">
               {[
-                "10 AI improvements per week",
+                "AI Assitant for Bio, Services, and Highlights",
                 "Basic analytics",
                 "Community support",
               ].map((feature) => (
@@ -37,7 +74,9 @@ export default function Pricing() {
               ))}
             </ul>
             <div className="mt-auto flex flex-col gap-2">
-              <Button variant="outline" className="w-full">Start for Free</Button>
+              <a href='/register'>
+                <Button variant="outline" className="w-full">Start for Free</Button>
+              </a>
               <p className="caption text-muted-foreground text-center">No credit card required</p>
             </div>
           </Card>
@@ -48,8 +87,11 @@ export default function Pricing() {
               <span className="caption bg-accent text-accent-foreground px-3 py-1 rounded-full absolute -top-4 left-1/2 -translate-x-1/2 shadow-sm">Best Value</span>
               <div className="heading-3 mt-4">Pro Monthly Early Adopter</div>
               <div className="paragraph mt-2 mb-4">
-                <span className="text-4xl font-bold">$6</span>
-                <span className="text-base font-medium text-muted-foreground"> / month</span>
+                <div className="flex items-end justify-center gap-2">
+                  <span className="text-4xl font-bold text-muted-foreground line-through">$49</span>
+                  <span className="text-4xl font-bold">$30</span>
+                  <span className="text-base font-medium text-muted-foreground"> / month</span>
+                </div>
               </div>
             </div>
             <ul className="list-none space-y-2 mb-6">
@@ -67,7 +109,13 @@ export default function Pricing() {
               ))}
             </ul>
             <div className="mt-auto flex flex-col gap-2">
-              <Button className="w-full">Choose Early Adopter</Button>
+              <Button 
+                className="w-full" 
+                onClick={handleUpgrade}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Loading...' : 'Choose Early Adopter'}
+              </Button>
               <p className="caption text-muted-foreground text-center">Cancel anytime</p>
             </div>
           </Card>
